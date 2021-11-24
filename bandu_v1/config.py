@@ -1,0 +1,1 @@
+TABLE_HEIGHT = .625
