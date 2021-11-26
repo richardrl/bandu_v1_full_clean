@@ -268,3 +268,27 @@ def augment_depth_realsense(depth, depth_adjustment=0, coefficient_scale=1):
     new_depth = np.random.normal(loc=depth, scale=sigma)
 
     return new_depth
+
+
+
+def uniform_downsample(uniform_sample_max, pointcloud):
+    """
+    Uniformly downsamples self.uniform_sample_max points. If there are not enough points, result_tuple with replacement.
+    :param pointcloud:
+    :return:
+    """
+    assert len(pointcloud.shape) == 2
+    bandu_logger.debug("Pointcloud shape")
+    bandu_logger.debug(pointcloud.shape)
+    try:
+        random_idxs = np.random.choice(pointcloud.shape[0],
+                                       size=uniform_sample_max,
+                                       replace=False)
+        np.random.shuffle(pointcloud)
+        return pointcloud[random_idxs, :]
+    except ValueError as e:
+        random_idxs = np.random.choice(pointcloud.shape[0],
+                                       size=uniform_sample_max,
+                                       replace=True)
+        np.random.shuffle(pointcloud)
+        return pointcloud[random_idxs, :]

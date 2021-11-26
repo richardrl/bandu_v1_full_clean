@@ -1,6 +1,6 @@
 import glob
 from pathlib import Path
-from bandu_v1.config import TABLE_HEIGHT
+from bandu.config import TABLE_HEIGHT
 import argparse
 import os
 import json
@@ -11,7 +11,7 @@ import pybullet as p
 import torch
 import random
 from scipy.spatial.transform import Rotation as R
-from utils import pointcloud_util
+from utils import camera_util, bandu_util, pointcloud_util, pointnet2_utils
 
 import hashlib
 import time
@@ -52,7 +52,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
     initial_orientation = bandu_util.get_initial_orientation("full")
 
     # true dropping position
-    start_pos = data_util.get_position_for_drop_above_table(height_off_set=height_offset)
+    start_pos = bandu_util.get_position_for_drop_above_table(height_off_set=height_offset)
 
     p.resetBasePositionAndOrientation(current_oid, start_pos, initial_orientation.as_quat())
 
@@ -73,7 +73,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
     pointcloud, uv_one_in_cam, depths = camera_util.get_joint_pointcloud(cameras,
                                                   obj_id=current_oid,
                                                   filter_table_height=False,
-                                                return_ims=True)
+                                                return_uv_cam_only=True)
     if not uv_one_in_cam:
         return dict()
     active_camera_ids = []
@@ -223,13 +223,16 @@ if __name__ == "__main__":
     parser.add_argument('--show_cams', action='store_true')
     parser.add_argument('--pc_save_dir', help="Save dir for canonical pointclouds samples",
                         default="out/canonical_pointclouds")
-    parser.add_argument('--no_table', action='store_true')
+    parser.add_argument('--no_table', action='store_false')
     parser.add_argument('--no_simulate', action='store_false')
     parser.set_defaults(simulate=True)
+    parser.set_defaults(table=True)
 
     args = parser.parse_args()
 
-    plane_id, table_id = bandu_util.load_scene(p_connect_type=p.GUI if args.pb_loop else p.DIRECT, realtime=0)
+
+    # plane_id, table_id = bandu_util.load_scene(p_connect_type=p.GUI if args.pb_loop else p.DIRECT, realtime=0)
+    p.connect(p.DIRECT)
 
     # p.removeBody(plane_id)
     if args.no_table:

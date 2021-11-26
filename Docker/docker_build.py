@@ -40,7 +40,7 @@ def execute_build(args):
 
 
 if __name__ == '__main__':
-    default_image_name = "richardrl/bandu_v1"
+    default_image_name = "richardrl/bandu"
 
     parser = argparse.ArgumentParser()
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
                         help='0 if should build without using cache')
 
     parser.add_argument('-f', '--docker_file', type=str,
-                        default='bandu_v1.dockerfile',
+                        default='bandu.dockerfile',
                         help='which Dockerfile to build from')
 
     parser.add_argument('-d', '--dry_run', action='store_true',
