@@ -26,6 +26,7 @@ def execute_build(args):
     cmd = 'DOCKER_BUILDKIT=1 docker build '
     cmd += '--ssh default '
     cmd += '--network=host '
+    cmd += '--progress=plain '
     if args.no_cache:
         cmd += '--no-cache '
     cmd += '-t %s -f %s .' % (args.image, args.docker_file)
@@ -40,7 +41,7 @@ def execute_build(args):
 
 
 if __name__ == '__main__':
-    default_image_name = "richardrl/bandu"
+    default_image_name = "richardrl/bandu_v1"
 
     parser = argparse.ArgumentParser()
 
@@ -52,7 +53,7 @@ if __name__ == '__main__':
                         help='0 if should build without using cache')
 
     parser.add_argument('-f', '--docker_file', type=str,
-                        default='bandu.dockerfile',
+                        default='bandu_v1.dockerfile',
                         help='which Dockerfile to build from')
 
     parser.add_argument('-d', '--dry_run', action='store_true',

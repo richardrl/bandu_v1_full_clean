@@ -1,3 +1,6 @@
+# note: if you have an existing container, this will simply sync into that container and not create
+# a new container
+
 IMAGE=richardrl/bandu_v1:latest
 XAUTH=/tmp/.docker.xauth
 if [ ! -f $XAUTH ]
@@ -22,5 +25,5 @@ docker run -it \
     --privileged \
     --runtime=nvidia \
     --net=host \
-    ${IMAGE}
-
+    ${IMAGE} \
+    bash
