@@ -94,14 +94,14 @@ from data_generation.dataset import PointcloudDataset
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
-git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode(("utf-8")).split("\n")[0]
+# git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode(("utf-8")).split("\n")[0]
 
 if args.detect_anomaly:
     torch.autograd.set_detect_anomaly(True)
 
 
 wandb.init(project="python_oid_prediction", tags=["classifier"])
-wandb.config['git_id'] = git_hash
+# wandb.config['git_id'] = git_hash
 wandb.config['run_dir'] = wandb.run.dir
 wandb.save(args.hyper_config)
 

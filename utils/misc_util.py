@@ -48,3 +48,7 @@ def load_ldd_function_from_filepath(filepath):
     lc = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(lc)
     return lc.get_loss_and_diag_dict
+
+
+# def get_git_commit_from_disk():
+#     git_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode(("utf-8")).split("\n")[0]
