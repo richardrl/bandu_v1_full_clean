@@ -1,4 +1,6 @@
 import numpy as np
+import importlib
+
 
 def pad_same_size(list_of_np_arrays):
     """
@@ -32,3 +34,17 @@ def pad_same_size(list_of_np_arrays):
         else:
             list_of_np_arrays[idx] = np.pad(list_of_np_arrays[idx], pad_width=((0, max_num_objects - arr.shape[0]), (0, max_num_points - arr.shape[1]), (0, 0)))
     return list_of_np_arrays
+
+
+def load_hyperconfig_from_filepath(filepath):
+    spec = importlib.util.spec_from_file_location("hc", filepath)
+    hc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hc)
+    return hc.config
+
+
+def load_ldd_function_from_filepath(filepath):
+    spec = importlib.util.spec_from_file_location("lc", filepath)
+    lc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lc)
+    return lc.get_loss_and_diag_dict

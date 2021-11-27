@@ -1,5 +1,7 @@
-# bandu_v1_full_clean
-
+# New Features
+- Contact plane registration implementation
+- CVAE models, including implementation of Mixture of Gaussian prior
+- Various loss function implementations
 
 # Generating data
 ### SO(3) augmentation:
@@ -13,3 +15,10 @@ python3 data_generation/1_generate_pointclouds_v2.py parts/main/bandu_train/ tes
 ```
 python3 5_visualize_sample_pkl.py ~/bandu_v1_full_clean/out/canonical_pointclouds/test/canonical_pointcloud_samples/Egg\ v2/0.pkl
 ```
+
+
+# Credits
+
+- https://github.com/yanx27/Pointnet_Pointnet2_pytorch
+- https://github.com/FlyingGiraffe/vnn
+- https://github.com/AntixK/PyTorch-VAE/tree/master/models

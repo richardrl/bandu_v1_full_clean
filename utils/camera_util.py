@@ -78,6 +78,7 @@ def get_joint_pointcloud(airobot_cameras,
                            depth=depth[cam_id] if depth is not None else None,
                            return_uv_cam_only=return_uv_cam_only)
                for cam_id, cam in enumerate(airobot_cameras)]
+
     # Each point cloud is num_points X 3
     pointclouds = [output[0] for output in outputs]
 
