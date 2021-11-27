@@ -35,6 +35,7 @@ RUN pip3 install scipy==1.4.1
 RUN pip3 install yacs==0.1.7
 RUN pip3 install lxml==4.5.2
 RUN pip3 install wandb==0.10.28
+RUN pip3 install nflows==0.14
 
 RUN --mount=type=cache,target=/root/.cache \
     pip3 install -r requirements.txt

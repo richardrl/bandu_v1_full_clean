@@ -4,7 +4,7 @@ import numpy as np
 import pybullet as p
 from matplotlib import pyplot as plt
 
-from bandu.imports.airobot.sensor.camera import rgbdcam_pybullet
+from imports.airobot.sensor.camera import rgbdcam_pybullet
 from utils.bullet_util import get_cam_img
 from bandu.config import *
 

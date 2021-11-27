@@ -1,24 +1,21 @@
 import torch
-from bandu.torch.modules import ResidualBlock
+from models.generic_modules import ResidualBlock
 from nflows.distributions import StandardNormal
 from nflows.flows import Flow
 from nflows.transforms import ReversePermutation, MaskedAffineAutoregressiveTransform, CompositeTransform
 from torch import nn, distributions as D
 from torch.nn import functional as F
 
-from supervised_training.models.pointnet_cvae_models import rot_from_correspondences
-# from supervised_training.models.pointnet_models import PointnetCls, PointnetSeg, PointnetSegAndCls, PointnetClsAndCls
-from supervised_training.utils.training_util import init_weights
-from supervised_training.utils import vae_util
+from models.pointnet_cvae_models import rot_from_correspondences
+from utils import vae_util, transform_util, loss_util, train_util
 import numpy as np
-from supervised_training.models.dgcnn_partseg import DGCNNPartSeg
-from supervised_training.models.dgcnn_cls import DGCNNCls
-from supervised_training.models.dgcnn_cls_small import DGCNNClsSmall
-from supervised_training.models.pointnet_models import PointnetCls, PointnetSeg, PointnetSegAndCls, PointnetClsAndCls
-from bandu.utils import transform_util, loss_util
+from models.dgcnn_partseg import DGCNNPartSeg
+from models.dgcnn_cls import DGCNNCls
+from models.dgcnn_cls_small import DGCNNClsSmall
+from models.pointnet_models import PointnetCls, PointnetSeg, PointnetSegAndCls, PointnetClsAndCls
 
 from scipy.spatial.transform import Rotation as R
-from bandu.imports.bingham_rotation_learning.qcqp_layers import A_vec_to_quat
+from imports.bingham_rotation_learning.qcqp_layers import A_vec_to_quat
 
 
 class DGCNNCVAESeg(nn.Module):
@@ -145,7 +142,7 @@ class DGCNNCVAESeg(nn.Module):
                                                    channel=6 if use_normals else 3,
                                                    normal_channel=use_normals)
                 self.prior_components = prior_predictor_kwargs['num_components']
-            self.flow.apply(init_weights)
+            self.flow.apply(train_util.init_weights)
 
         assert label_type in ["btb", "canonical_pc", "rotated_quat_inv"]
         self.label_type = label_type
@@ -315,33 +312,12 @@ class DGCNNCVAESeg(nn.Module):
                 print(self.label_type)
                 # raise NotImplementedError
 
-        # # concatenate the label
-        # # -> nB, num_points, 6
-        # pc = torch.cat((pc, batch['pointcloud'].squeeze(1)), dim=-1)
-
-        # concatenate the label (binary logit indices...)
-        # nB, num_points, 3 AND nB, 4 -> nB, num_points, 7
-
-        # prepped_quats = batch['quats_applied'].unsqueeze(1).expand(-1, num_points, -1)
-        # pc = torch.cat((pc, prepped_quats), dim=-1)
-
         if self.use_normals:
             pc = torch.cat((pc_X, normals_X, reshaped_label), dim=-1)
         else:
             pc = torch.cat((pc_X, reshaped_label), dim=-1)
 
-        # before permutation, pc is nB*nO, num_points, 4
-        # after permutation, it is nB*nO, 4, num_points, which is what is expected
-        # -> nB*nO, 512
-        # if self.pointcloud_encoder.feat1.stn_transform:
-        #     embedding, encoder_trans = self.pointcloud_encoder(pc.permute(0, 2, 1))
-        # else:
-
-        # try:
         embedding = self.pointcloud_encoder(pc.permute(0, 2, 1))
-        # except:
-        #     import pdb
-        #     pdb.set_trace()
 
         if self.posterior_type == "normal":
             # -> nB, latent_dim and nB, latent_dim

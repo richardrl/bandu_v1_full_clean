@@ -33,3 +33,9 @@ def model_creator(config, train_dataset=None, device_id=0):
         bandu_logger.debug("No models found. Did you label the model names incorrectly?")
         raise NotImplementedError
     return models_container_dict
+
+
+def init_weights(m):
+    if hasattr(m, "weight"):
+        torch.nn.init.uniform_(m.weight, -3e-9, 3e-9)
+        m.bias.data.fill_(-3e-9)
