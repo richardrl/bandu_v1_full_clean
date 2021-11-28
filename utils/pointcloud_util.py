@@ -292,3 +292,25 @@ def uniform_downsample(uniform_sample_max, pointcloud):
                                        replace=True)
         np.random.shuffle(pointcloud)
         return pointcloud[random_idxs, :]
+
+
+def rot_from_correspondences(nB, B, A):
+    """
+
+    :param B: nB, 3, num_points, target points
+    :param A: nB, 3, num_points, transformed source points
+    :return: Rotation matrices
+    """
+    # -> nB, 3, 3
+    cross_covariance_matrix = torch.bmm(B, A.transpose(-1, -2).to(B.device))
+
+    U, diagS, Vt = torch.linalg.svd(cross_covariance_matrix)
+
+    # replace smallest singular value with det(UVt)
+
+    UVt = torch.bmm(U, Vt)
+    diagSprime = torch.ones(nB, 2).to(UVt.device)
+    diagSprime = torch.cat((diagSprime, torch.linalg.det(UVt).unsqueeze(-1)), dim=-1)
+
+    R = torch.bmm(U, torch.bmm(torch.diag_embed(diagSprime), Vt))
+    return R

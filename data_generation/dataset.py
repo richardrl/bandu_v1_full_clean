@@ -66,6 +66,7 @@ def get_bti(batched_pointcloud,
     # assert np.sum(bti) > 0 and np.sum(bti) < batched_pointcloud.shape[0], np.sum(bti)
     return bti
 
+
 def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold_frac,
                          linear_search=False,
                          max_z=None, min_z=None,
@@ -146,6 +147,7 @@ def read_data_dir(samples_dir):
     :param data_working_dir:
     :return:
     """
+    assert samples_dir is not None
     assert samples_dir[-1] != "/"
     # object_dirs = absolute_dir_paths(Path(data_working_dir) / "samples")
     object_dirs = absolute_dir_paths(samples_dir)
@@ -368,6 +370,3 @@ class PointcloudDataset(Dataset):
 if __name__ == '__main__':
     pcdset = PointcloudDataset("/home/richard/improbable/spinningup/out/canonical_pointclouds/bandu_val/v2_test/samples")
     sample = pcdset.__getitem__(0)
-
-    import pdb
-    pdb.set_trace()

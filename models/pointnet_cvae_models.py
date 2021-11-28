@@ -6,32 +6,6 @@ from torch.nn import functional as F
 from supervised_training.models.pointnet_models import PointnetCls, PointnetSeg
 from supervised_training.utils.vae_util import gumbel_softmax
 
-"""
-Utilities
-"""
-
-def rot_from_correspondences(nB, B, A):
-    """
-
-    :param B: nB, 3, num_points, target points
-    :param A: nB, 3, num_points, transformed source points
-    :return: Rotation matrices
-    """
-    # -> nB, 3, 3
-    cross_covariance_matrix = torch.bmm(B, A.transpose(-1, -2).to(B.device))
-
-    U, diagS, Vt = torch.linalg.svd(cross_covariance_matrix)
-
-    # replace smallest singular value with det(UVt)
-
-    UVt = torch.bmm(U, Vt)
-    diagSprime = torch.ones(nB, 2).to(UVt.device)
-    diagSprime = torch.cat((diagSprime, torch.linalg.det(UVt).unsqueeze(-1)), dim=-1)
-
-    R = torch.bmm(U, torch.bmm(torch.diag_embed(diagSprime), Vt))
-    return R
-
-
 class CVAECls(nn.Module):
     def __init__(self, embedding_dim, latent_dim, encoder_kwargs, decoder_kwargs):
         super().__init__()

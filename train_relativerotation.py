@@ -8,6 +8,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--device_id', default=1)
 parser.add_argument('hyper_config', help="Hyperparams config python file.")
 parser.add_argument('ldd_config', help='Loss and diag dict config python file')
+parser.add_argument('train_dset_path', type=str)
+parser.add_argument('val_dset_path', type=str)
+
 # parser.add_argument('loss_str', type=str, help="Loss str describing what loss fnx to use")
 parser.add_argument('--resume_pkl', type=str, help="Checkpoint to resume from")
 parser.add_argument('--load_optim', action='store_true')
@@ -55,10 +58,7 @@ parser.add_argument('--freeze_decoder', action='store_true', help="Freeze decode
 parser.add_argument('--gpu0', type=int, default=0, help="GPU ID to use for multi GPU 0")
 parser.add_argument('--gpu1', type=int, default=1, help="GPU ID to use for multi GPU 1")
 
-parser.add_argument('--train_dset_path', type=str)
-parser.add_argument('--val_dset_path', type=str)
-
-parser.add_argument('--stats_json', type=str)
+parser.add_argument('--stats_json', type=str, help='Used for normalization')
 
 parser.add_argument('--center_fps_pc', action='store_true', help='Center FPS')
 
@@ -149,8 +149,11 @@ total_iteration = 0
 if args.log_gradients:
     wandb.watch(model, log_freq=1)
 
-with open(args.stats_json, "r") as fp:
-    stats_dic = json.load(fp)
+if args.stats_json:
+    with open(args.stats_json, "r") as fp:
+        stats_dic = json.load(fp)
+else:
+    stats_dic = None
 
 below_freeze_threshold_count = 0
 

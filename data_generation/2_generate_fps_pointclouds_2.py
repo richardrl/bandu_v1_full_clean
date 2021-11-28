@@ -1,14 +1,15 @@
 # load original dataset
 # generates FPS and noisy pointclouds
-from supervised_training.data_generation.dataset import PointcloudDataset
+from data_generation.dataset import PointcloudDataset
 import torch
-from supervised_training.utils.pointcloud_util import *
+from utils import pointcloud_util, camera_util
 from pathlib import Path
-from bandu.utils import *
 import sys
 from deco import *
 import itertools
 import time
+import numpy as np
+from scipy.spatial.transform.rotation import Rotation as R
 
 
 # original_data_dir = "/home/richard/improbable/spinningup/out/canonical_pointclouds/bandu_val/test_v2/samples"
@@ -52,7 +53,7 @@ def uvd_to_sample_on_disk(depths, uv_one_in_cam, row, fps_idx, dic, original_pc)
             if dm.size != 0:
                 active_camera_ids.append(cam_id)
 
-        new_depths = [augment_depth_realsense(dm, coefficient_scale=1)
+        new_depths = [pointcloud_util.augment_depth_realsense(dm, coefficient_scale=1)
                       for dm in [depths[cid] for cid in active_camera_ids]]
 
         original_pc = camera_util.get_joint_pointcloud([cameras[id_] for id_ in active_camera_ids],
@@ -71,7 +72,7 @@ def uvd_to_sample_on_disk(depths, uv_one_in_cam, row, fps_idx, dic, original_pc)
     # uniform sample before FPS
     original_pc = original_pc[np.random.choice(original_pc.shape[0], 10000, replace=False)]
 
-    fps_pc = get_farthest_point_sampled_pointcloud(original_pc,
+    fps_pc = pointcloud_util.get_farthest_point_sampled_pointcloud(original_pc,
                                                    2048)
 
     new_dic = dic.copy()

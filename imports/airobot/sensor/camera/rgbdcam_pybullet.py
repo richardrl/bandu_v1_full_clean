@@ -1,6 +1,6 @@
 import numpy as np
 import pybullet as p
-from bandu.imports.airobot.sensor.camera.rgbdcam import RGBDCamera
+from imports.airobot.sensor.camera.rgbdcam import RGBDCamera
 import pickle
 from yacs.config import CfgNode as CN
 from utils import *

@@ -6,8 +6,7 @@ from nflows.transforms import ReversePermutation, MaskedAffineAutoregressiveTran
 from torch import nn, distributions as D
 from torch.nn import functional as F
 
-from models.pointnet_cvae_models import rot_from_correspondences
-from utils import vae_util, transform_util, loss_util, train_util
+from utils import vae_util, transform_util, loss_util, train_util, pointcloud_util
 import numpy as np
 from models.dgcnn_partseg import DGCNNPartSeg
 from models.dgcnn_cls import DGCNNCls
@@ -454,9 +453,9 @@ class DGCNNCVAESeg(nn.Module):
             target_pc = decoder_corresponding_translations + A.to(decoder_corresponding_translations.device) \
                 if self.residual_target_pc else decoder_corresponding_translations
             if self.decoder_type == "seg":
-                out['decoder'] = [rot_from_correspondences(nB, target_pc, A), decoder_corresponding_translations]
+                out['decoder'] = [pointcloud_util.rot_from_correspondences(nB, target_pc, A), decoder_corresponding_translations]
             else:
-                out['decoder'] = [rot_from_correspondences(nB, target_pc, A), decoder_logvars]
+                out['decoder'] = [pointcloud_util.rot_from_correspondences(nB, target_pc, A), decoder_logvars]
         elif self.quaternion_head:
             assert not self.A_vec_to_quat_head
             quaternions = decoder_logits / torch.linalg.norm(decoder_logits, dim=-1).unsqueeze(-1)

@@ -2,6 +2,8 @@ import torch.nn as nn
 import torch.utils.data
 import torch.nn.functional as F
 from .utils.dgcnn_util import get_graph_feature
+from imports.bingham_rotation_learning.qcqp_layers import A_vec_to_quat
+from utils import transform_util, loss_util
 
 
 class DGCNNCls(nn.Module):
@@ -121,9 +123,6 @@ class DGCNNCls(nn.Module):
         trans_feat = None
         # return x, trans_feat
         return x
-
-from bandu.imports.bingham_rotation_learning.qcqp_layers import A_vec_to_quat
-from bandu.utils import transform_util, loss_util
 
 class DGCNNBatchWrapper(DGCNNCls):
     """

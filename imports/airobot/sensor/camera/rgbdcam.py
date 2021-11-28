@@ -1,7 +1,7 @@
 import numpy as np
 import pybullet as p
 
-from bandu.imports.airobot.sensor.camera.camera import Camera
+from imports.airobot.sensor.camera.camera import Camera
 
 
 class RGBDCamera(Camera):

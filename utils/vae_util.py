@@ -2,7 +2,7 @@ from torch import nn
 import torch
 import tqdm
 from torch.nn import functional as F
-from supervised_training.utils import loss_util
+from utils import loss_util
 
 
 def marginalize_likelihood_binary(model,
