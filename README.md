@@ -8,6 +8,10 @@
 python3 train_relativerotation.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/losses/cvae_btb_loss_config.py out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples 
 ```
 
+# Training loss visualization
+We use Wandb to visualize losses during training. 
+You are welcome to roll your own visualization, just comment out the lines involving wandb.
+
 # Generating data
 ### SO(3) augmentation
 

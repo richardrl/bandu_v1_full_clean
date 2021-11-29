@@ -25,5 +25,6 @@ docker run -it \
     --privileged \
     --runtime=nvidia \
     --net=host \
+    -e WANDB_API_KEY \
     ${IMAGE} \
     bash

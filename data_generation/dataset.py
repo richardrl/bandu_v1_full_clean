@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import sys
 import pandas as pd
-from utils import vis_util, mesh_util
+from utils import vis_util, mesh_util, surface_util
 import open3d as o3d
 
 from utils.pointcloud_util import *
@@ -84,7 +84,6 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
 
     # canonical = R.from_quat(orientation_quat).inv().apply(rotated_batched_pointcloud.cpu().data.numpy())
     canonical = R.from_quat(orientation_quat).inv().apply(rotated_batched_pointcloud)
-
     if linear_search:
         # do a linear search over 100 pairs for the section that gives best oriented normal, for the CANONICAL pointcloud,
         # in terms of cosine distance to the negative gravity vector
@@ -92,7 +91,7 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
 
         # keep increasing the threshold until you get enough points
 
-        def find_bti(threshold_frac_inner):
+        def find_bottom_threshold_interval(threshold_frac_inner):
             found_btis = []
             found_rotmats_distance_to_identity = []
 
@@ -104,7 +103,9 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
                                                                                                       torch.as_tensor(found_bti.squeeze(-1)),
                                                                                                       min_z=min_z,
                                                                                                       max_z=max_z)
-                except:
+                except Exception as e:
+                    print("Failed to fit rotmat")
+                    print(e)
                     continue
                 # print(relative_rotmat)
                 found_rotmats_distance_to_identity.append(np.linalg.norm(relative_rotmat - np.eye(3)))
@@ -113,7 +114,7 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
 
         try:
             for threshold_frac_inner in [threshold_frac, 2*threshold_frac, 4*threshold_frac, 5*threshold_frac]:
-                outer_found_rotmats_distance_to_identity, outer_found_btis = find_bti(threshold_frac_inner)
+                outer_found_rotmats_distance_to_identity, outer_found_btis = find_bottom_threshold_interval(threshold_frac_inner)
 
                 if outer_found_rotmats_distance_to_identity:
                     closest_to_identity_id = np.argmin(outer_found_rotmats_distance_to_identity)
@@ -162,7 +163,7 @@ def read_data_dir(samples_dir):
         object_name = os.path.basename(os.path.normpath(object_dir_path))
         object_names = [object_name for _ in range(len(sample_file_paths))]
 
-        print("ln49 sfp")
+        # print("ln49 sfp")
         # print(sample_file_paths)
         sample_idxs = [int(os.path.basename(os.path.normpath(sfp)).split(".")[0]) for sfp in sample_file_paths]
         sample_df = pd.DataFrame(zip(sample_file_paths, object_names, sample_idxs),

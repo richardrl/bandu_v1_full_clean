@@ -68,3 +68,50 @@ def text_3d(text, pos, direction=None, degree=0.0, font='Ubuntu-L.ttf', density=
     trans[0:3, 3] = np.asarray(pos)
     pcd.transform(trans)
     return pcd
+
+import open3d
+from utils import transform_util
+
+
+def create_arrow(vec, color, vis=None, vec_len=None, scale=.06, radius=.12, position=(0,0,0),
+                 object_com=None):
+    """
+    Creates an error, where the arrow size is based on the vector magnitude.
+    :param vec:
+    :param color:
+    :param vis:
+    :param scale:
+    :param position:
+    :return:
+    """
+    if vec_len is None:
+        vec_len = (np.linalg.norm(vec))
+
+    mesh_arrow = open3d.geometry.TriangleMesh.create_arrow(
+        cone_height=0.2 * vec_len * scale,
+        cone_radius=0.06 * vec_len * radius,
+        cylinder_height=0.8 * vec_len * scale,
+        cylinder_radius=0.04 * vec_len * radius
+    )
+
+    # the default arrow points straightup
+    # therefore, we find the rotation that takes us from this arrow to our target vec, "vec"
+
+    if object_com is not None:
+        vec_endpoint = position + vec
+        neg_vec_endpoint = position - vec
+        if np.linalg.norm(vec_endpoint - object_com) < np.linalg.norm(neg_vec_endpoint - object_com):
+            vec = -vec
+
+    # print("ln554 create_arrow")
+    # print(vec)
+    rot_mat = transform_util.get_rotation_matrix_between_vecs(vec, [0, 0, 1])
+    print(rot_mat)
+    mesh_arrow.rotate(rot_mat, center=np.array([0,0,0]))
+
+    H = np.eye(4)
+    H[:3, 3] = position
+    mesh_arrow.transform(H)
+
+    mesh_arrow.paint_uniform_color(color)
+    return mesh_arrow
