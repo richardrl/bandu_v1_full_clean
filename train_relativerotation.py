@@ -100,7 +100,7 @@ if args.detect_anomaly:
     torch.autograd.set_detect_anomaly(True)
 
 
-wandb.init(project="python_oid_prediction", tags=["classifier"])
+wandb.init(project="bandu_v1_full_clean", tags=[])
 # wandb.config['git_id'] = git_hash
 wandb.config['run_dir'] = wandb.run.dir
 wandb.save(args.hyper_config)

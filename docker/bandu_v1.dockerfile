@@ -24,7 +24,6 @@ RUN apt-get install -y libtiff5-dev libjpeg8-dev libopenjp2-7-dev zlib1g-dev \
         libharfbuzz-dev libfribidi-dev libxcb1-dev
 
 RUN pip3 install pybullet==3.1.7
-RUN pip3 install torch==1.5.0
 RUN pip3 install torchvision==0.6.0
 RUN pip3 install tqdm==4.46.1
 RUN pip3 install wandb==0.10.28
@@ -36,6 +35,7 @@ RUN pip3 install yacs==0.1.7
 RUN pip3 install lxml==4.5.2
 RUN pip3 install wandb==0.10.28
 RUN pip3 install nflows==0.14
+RUN pip3 install torch==1.9.0
 
 RUN --mount=type=cache,target=/root/.cache \
     pip3 install -r requirements.txt
