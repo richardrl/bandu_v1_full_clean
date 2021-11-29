@@ -294,7 +294,7 @@ class DGCNNCVAESeg(nn.Module):
         if self.normalize:
             # normalize
             # nB, num_points, 3
-            assert torch.all(batch['rotated_pointcloud_var'] > 0)
+            assert torch.all(batch['rotated_pointcloud_var'] > 0), print("Did you load a stats.json?")
 
             pc_X = (pc_X - batch['rotated_pointcloud_mean'])/\
                    (torch.sqrt(batch['rotated_pointcloud_var']) + 1E-6)

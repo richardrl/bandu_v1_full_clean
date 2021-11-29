@@ -5,7 +5,10 @@
 
 # Training
 ```
-python3 train_relativerotation.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/losses/cvae_btb_loss_config.py out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples 
+python3 train_relativerotation.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py 
+configs/losses/cvae_btb_loss_config.py out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples 
+out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples --stats_json=out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples/rr_pn_stats.json
+
 ```
 
 # Training loss visualization
@@ -20,6 +23,7 @@ python3 data_generation/1_generate_pointclouds_v2.py parts/main/bandu_train/ tes
 
 python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointclouds/test/canonical_pointcloud_samples 2 1
  
+python3 calculate_stats_json.py out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples 0
 ```
 
 ### Viewing sample pkl

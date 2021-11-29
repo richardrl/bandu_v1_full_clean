@@ -199,8 +199,8 @@ for epoch in range(num_epochs):
             with torch.no_grad():
                 predictions = model(batch)
                 val_loss, val_diag_dict = get_loss_and_diag_dict(predictions, batch,
-                                                                 increment_iteration=False,
-                                                                 loss_params=config['loss_params'])
+                                                                 increment_iteration=False
+                                                                 )
             wandb_dict = {"val/total_loss": val_loss.data.cpu().numpy(),
                               "val/total_iteration": total_iteration,
                               "epoch": epoch}
@@ -239,8 +239,7 @@ for epoch in range(num_epochs):
 
         optimizer.zero_grad()
 
-        loss, diag_dict = get_loss_and_diag_dict(predictions, batch,
-                                             loss_params=config['loss_params'])
+        loss, diag_dict = get_loss_and_diag_dict(predictions, batch)
 
         loss.backward()
 

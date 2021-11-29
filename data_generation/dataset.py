@@ -347,7 +347,7 @@ class PointcloudDataset(Dataset):
                                             resultant_quat, self.threshold_frac, self.linear_search,
                                                                            max_z=main_dict['canonical_max_height']*M_scale[2, 2],
                                                                            min_z=main_dict['canonical_min_height']*M_scale[2, 2],
-                                                                           max_frac_threshold=self.max_frac_threshold).astype(float)
+                                                                           max_frac_threshold=self.max_frac_threshold).astype(float).squeeze(-1)
             assert np.sum(1-main_dict['bottom_thresholded_boolean']) >= 15, print(np.sum(1-main_dict['bottom_thresholded_boolean']))
 
         # 1-btb because 0s are contact points, 1s are background points

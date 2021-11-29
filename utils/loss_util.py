@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 def KL_divergence_gaussians_standard_prior(mu, logvar):
     # calculates kl divergence between normal gaussian and the learned encoder gaussian
     # https://stats.stackexchange.com/questions/7440/kl-divergence-between-two-univariate-gaussians
@@ -41,6 +40,77 @@ def KL_divergence_independent_multivariate_gaussians(mu_q, mu_p, logvar_q, logva
     term4 = torch.diagonal(torch.bmm(Sigma_q_inv, Sigma_p), dim1=-2, dim2=-1).sum(-1)
     return (1/2) * (term1 - k + term3 + term4)
 
+
+import torch.nn.functional as F
+def log_pdf_mog(z_sample, means, logvars, component_weights=None, st_softmax=False):
+    """
+    See Eq. 22 of the vampprior paper
+
+    This actually calculates the log pdf of any mixture of gaussians, not just vampprior
+    :param self:
+    :param z_sample: nB*nO, latent_dim
+    :param means:
+    :param logvars:
+    :return: PDF value of each scalar z according to vampprior.
+    """
+    # assume nO==1
+    # nB*nO, 1, latent_dim
+    z_sample = z_sample.unsqueeze(1)
+
+    if len(means.shape) == 3:
+        # nB, num_components, 3
+        num_components = means.shape[1]
+    else:
+        # len==2
+        num_components = means.shape[0]
+
+    if (means.shape == 2):
+        # if using a fixed set of mog components
+        # unsqueeze batch dim
+        # -> 1 x num_components x latent_dim
+        means = means.unsqueeze(0)
+        logvars = logvars.unsqueeze(0)
+
+    # make distributions of all the components of the rotated_pc_mean, such that we can retrieve the PDF from these distributions
+    # because we have scalar logvariances, the normal has diagonal covariance matrix
+    d = torch.distributions.normal.Normal(means.to(z_sample.device),
+                                          torch.exp(logvars.to(z_sample.device)) ** (1 / 2))
+
+    # z_sample should broadcast along the 1 dimension,
+    # such that we collect a log_prob from every component of the vampprior
+    # -> nB, num_components, latent_dim
+    print("ln76 z_sample")
+    print(z_sample)
+
+    if component_weights is not None:
+        if st_softmax:
+            w = F.softmax(component_weights.to(z_sample.device), dim=-1)
+        else:
+            w = F.softmax(component_weights.to(z_sample.device), dim=-1)
+
+        # the log(w) is analogous to the 1/k term in vampprior paper eq 22
+        # TODO: is the log(w) calculation here correct...
+        if len(w.shape) == 2:
+            # d.log_prob: nB, num_components, latent_dim
+            log_p = d.log_prob(z_sample)
+        else:
+            raise NotImplementedError
+            log_p = d.log_prob(z_sample) + torch.log(w).unsqueeze(0).unsqueeze(-1)
+    else:
+        log_p = d.log_prob(z_sample) + math.log(1/num_components)
+
+    # sum over log probabilities, because uncorrelated multivariate normal is same as independent normal
+    # nB, num_components, latent_dim -> nB, num_components
+    log_p = log_p.sum(-1)
+
+    # sum (nB, num_components) joint prob of q and (nB, num_components) weight vector -> nB, num_components
+    log_p = log_p + torch.log(w + 1E-8)
+
+    # logsumexp for MoG, where we sum over the num_components dimension
+    log_prob = torch.logsumexp(log_p, dim=1, keepdim=False)
+
+    # -> nB
+    return log_prob
 
 
 def calculate_kld_loss_unreduced(
