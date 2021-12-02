@@ -32,6 +32,8 @@ python3 calculate_stats_json.py out/canonical_pointclouds/test/fps_randomizenois
 python3 5_visualize_sample_pkl.py ~/bandu_v1_full_clean/out/canonical_pointclouds/test/canonical_pointcloud_samples/Egg\ v2/0.pkl
 ```
 
+# Docker 
+To write to files in the mounted volume, make an "out" folder with permissions 777.
 
 # Credits
 

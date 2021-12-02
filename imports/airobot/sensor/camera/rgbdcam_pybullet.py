@@ -44,6 +44,7 @@ class RGBDCameraPybullet(RGBDCamera):
     def setup_camera_from_pkl(self, cam_pkl, scale_factor=1,
                               dist_from_eye_to_focus_pt=1,
                               camera_forward_z_offset=0):
+        self.cam_name = cam_pkl.split(".pkl")[0].split("/")[-1]
         with open(f"{cam_pkl}", "rb") as fp:
             camStateList = pickle.load(fp)
 
