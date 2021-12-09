@@ -50,6 +50,7 @@ class RGBDCamera(Camera):
         img_pixs[[0, 1], :] = img_pixs[[1, 0], :]
         self._uv_one = np.concatenate((img_pixs,
                                        np.ones((1, img_pixs.shape[1]))))
+
         self._uv_one_in_cam = np.dot(self.cam_int_mat_inv, self._uv_one)
 
     def get_cam_ext(self):
@@ -255,6 +256,8 @@ class RGBDCamera(Camera):
             # pcd in camera from depth
             depth = depth_im.reshape(-1) * self.depth_scale
 
+            import pdb
+            pdb.set_trace()
 
             rgb = None
             if rgb_im is not None:

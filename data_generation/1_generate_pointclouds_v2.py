@@ -1,3 +1,5 @@
+# You need to run this from the root of the project
+
 import glob
 from pathlib import Path
 from bandu.config import TABLE_HEIGHT
@@ -18,7 +20,7 @@ import time
 import itertools
 import numpy as np
 
-@concurrent
+# @concurrent
 def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, global_scaling, pb_loop=False, simulate=True,
                                        compute_oriented_normals=False, o3d_viz=False, data_dir=None,
                                        object_name=None):
@@ -144,7 +146,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
 
 
 
-@synchronized
+# @synchronized
 def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict, urdf_dir, prefix, num_samples, urdfs, pointcloud_output_dir,
                                           height_offset=.2,
                                           global_scaling=1.5,
@@ -176,7 +178,9 @@ def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict, urdf_dir
     print("ln181 saving to data_dir")
     print(canonical_samples_data_dir)
 
-    canonical_samples_data_dir.mkdir(parents=True, exist_ok=True)
+    # if we don't have the umask(0) and mode, the folder will be created with restrictive permissions
+    os.umask(0)
+    canonical_samples_data_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
 
     # make folders for each object
     for obj_name in urdf_name_to_pointcloud_dict.keys():
@@ -235,8 +239,8 @@ if __name__ == "__main__":
     p.connect(p.DIRECT)
 
     # p.removeBody(plane_id)
-    if args.no_table:
-        p.removeBody(table_id)
+    # if args.no_table:
+    #     p.removeBody(table_id)
 
     cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,
                                         camera_forward_z_offset=.2)
@@ -278,7 +282,7 @@ if __name__ == "__main__":
 
     urdfs = [f for f in glob.glob(str(Path(args.urdf_dir) / "**/*.urdf"), recursive=True)]
 
-    assert urdfs
+    assert urdfs, "Are you sure your urdf path is correct? If it's relative, check from what dir your script is running"
 
     urdf_name_to_pointcloud_dict = dict()
     for urdf_path in urdfs:

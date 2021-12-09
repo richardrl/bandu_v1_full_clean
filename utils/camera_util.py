@@ -65,7 +65,8 @@ def get_joint_pointcloud(airobot_cameras,
     # List of tuples (pts, colors)
     top_of_table_height = TABLE_HEIGHT
 
-
+    import pdb
+    pdb.set_trace()
     outputs = [cam.get_pcd(in_world=True,
                            filter_depth=filter_table_height,
                            obj_id=obj_id,
@@ -123,3 +124,66 @@ def get_image(
     img_width, img_height, rgbPixels = get_cam_img(cam_pkl, scale_factor)[:3]
     np_image = np.reshape(rgbPixels, (img_height,img_width, 4))[:, :, :3].astype(np.uint8)
     return np_image
+
+
+def convert_depth_to_pointcloud(depth_ims, camera_ext, camera_int):
+    """
+    This only works if there was no image segmentation done
+
+    :param depth_ims: m x n
+    :param camera_ext: 4 x 4
+    :param camera_int: 3 x 3
+    :return:
+        pointcloud: (mxn) x 3
+    """
+    img_height, img_width = depth_ims.shape
+    uv_coords = np.mgrid[0: img_height,
+               0: img_width].reshape(2, -1)
+    uv_coords[[0, 1], :] = uv_coords[[1, 0], :]
+
+    p_uv_one_C = np.concatenate((uv_coords,
+                              np.ones((1, uv_coords.shape[1]))))
+
+    p_uv_one_C = np.dot(np.linalg.inv(camera_int), p_uv_one_C)
+
+    p_scene_C = np.multiply(p_uv_one_C, depth_ims.flatten())
+
+    p_scene_one_C = np.concatenate((p_scene_C,
+                    np.ones((1, p_scene_C.shape[1]))),
+                   axis=0)
+
+    p_scene_one_W = np.dot(camera_ext, p_scene_one_C)
+
+    return p_scene_one_W[:3, :].T
+
+
+def convert_uv_depth_to_pointcloud(p_uv_one_C, depth_ims, camera_ext):
+    import pdb
+    pdb.set_trace()
+    p_scene_C = np.multiply(p_uv_one_C, depth_ims.flatten())
+
+    p_scene_one_C = np.concatenate((p_scene_C,
+                    np.ones((1, p_scene_C.shape[1]))),
+                   axis=0)
+
+    p_scene_one_W = np.dot(camera_ext, p_scene_one_C)
+
+    return p_scene_one_W[:3, :].T
+
+if __name__ == "__main__":
+    import torch
+    import sys
+    aa = torch.load(sys.argv[1])
+
+    cam_pkls = ["out/0_cam.pkl", "out/1_cam.pkl", "out/2_cam.pkl", "out/3_cam.pkl"]
+
+    cameras = []
+
+    import pickle
+    for cam_pkl in cam_pkls:
+        with open(cam_pkl, "rb") as fp:
+            cam = pickle.load(fp)
+            cameras.append(cam)
+    import pdb
+    pdb.set_trace()
+    pc = convert_uv_depth_to_pointcloud(aa['uv_one_in_cam'][0], aa['depths'][0], cameras[0]['cam_ext_mat'])

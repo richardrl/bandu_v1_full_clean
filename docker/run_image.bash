@@ -21,7 +21,7 @@ docker run -it \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     --env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
-    --volume="$PWD/../:/root/bandu_v1_full_clean" \
+    --volume="$PWD/../:/root/bandu_v1_full_clean":Z \
     --privileged \
     --runtime=nvidia \
     --net=host \
