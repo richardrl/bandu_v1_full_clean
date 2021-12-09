@@ -65,8 +65,6 @@ def get_joint_pointcloud(airobot_cameras,
     # List of tuples (pts, colors)
     top_of_table_height = TABLE_HEIGHT
 
-    import pdb
-    pdb.set_trace()
     outputs = [cam.get_pcd(in_world=True,
                            filter_depth=filter_table_height,
                            obj_id=obj_id,
@@ -83,9 +81,12 @@ def get_joint_pointcloud(airobot_cameras,
     # Each point cloud is num_points X 3
     pointclouds = [output[0] for output in outputs]
 
+    import pdb
+    pdb.set_trace()
     if return_uv_cam_only:
         depth = [output[-2] for output in outputs]
         uv_one_in_cam = [output[-1] for output in outputs]
+
         return np.concatenate(pointclouds, axis=0), depth, uv_one_in_cam
 
     if return_ims:

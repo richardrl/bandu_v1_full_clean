@@ -254,10 +254,8 @@ class RGBDCamera(Camera):
 
     
             # pcd in camera from depth
+            # depth should always be 1D!!!
             depth = depth_im.reshape(-1) * self.depth_scale
-
-            import pdb
-            pdb.set_trace()
 
             rgb = None
             if rgb_im is not None:

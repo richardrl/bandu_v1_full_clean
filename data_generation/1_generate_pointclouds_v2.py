@@ -72,7 +72,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
 
     current_p, current_q = p.getBasePositionAndOrientation(current_oid)
 
-    pointcloud, uv_one_in_cam, depths = camera_util.get_joint_pointcloud(cameras,
+    pointcloud, depths, uv_one_in_cam = camera_util.get_joint_pointcloud(cameras,
                                                   obj_id=current_oid,
                                                   filter_table_height=False,
                                                 return_uv_cam_only=True)
