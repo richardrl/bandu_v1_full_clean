@@ -156,10 +156,18 @@ def convert_depth_to_pointcloud(depth_ims, camera_ext, camera_int):
     return p_scene_one_W[:3, :].T
 
 
-def convert_uv_depth_to_pointcloud(p_uv_one_C, depth_ims, camera_ext):
-    import pdb
-    pdb.set_trace()
-    p_scene_C = np.multiply(p_uv_one_C, depth_ims.flatten())
+def convert_uv_depth_to_pointcloud(p_uv_one_C, depth_ims_flattened, camera_ext):
+    """
+
+    Args:
+        p_uv_one_C: [3, num_points]
+        depth_ims_flattened: [num_points]
+        camera_ext: [4, 4]
+
+    Returns:
+
+    """
+    p_scene_C = np.multiply(p_uv_one_C, depth_ims_flattened)
 
     p_scene_one_C = np.concatenate((p_scene_C,
                     np.ones((1, p_scene_C.shape[1]))),
@@ -169,10 +177,14 @@ def convert_uv_depth_to_pointcloud(p_uv_one_C, depth_ims, camera_ext):
 
     return p_scene_one_W[:3, :].T
 
+
 if __name__ == "__main__":
+    # unit test for pickle loading
     import torch
     import sys
-    aa = torch.load(sys.argv[1])
+    import open3d
+
+    canonical_pkl = torch.load(sys.argv[1])
 
     cam_pkls = ["out/0_cam.pkl", "out/1_cam.pkl", "out/2_cam.pkl", "out/3_cam.pkl"]
 
@@ -183,6 +195,8 @@ if __name__ == "__main__":
         with open(cam_pkl, "rb") as fp:
             cam = pickle.load(fp)
             cameras.append(cam)
-    import pdb
-    pdb.set_trace()
-    pc = convert_uv_depth_to_pointcloud(aa['uv_one_in_cam'][0], aa['depths'][0], cameras[0]['cam_ext_mat'])
+
+    from utils.vis_util import make_point_cloud_o3d
+    pc = convert_uv_depth_to_pointcloud(canonical_pkl['uv_one_in_cam'][0], canonical_pkl['depths'][0], cameras[0]['cam_ext_mat'])
+
+    open3d.visualization.draw_geometries([make_point_cloud_o3d(pc, [0, 0, 0])])
