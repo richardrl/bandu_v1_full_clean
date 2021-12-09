@@ -284,8 +284,6 @@ class RGBDCamera(Camera):
             #         raise NotImplementedError
             #         # uv_one_in_cam = self._uv_one_in_cam[:, ((seg_im & ((1 << 24) - 1)) == obj_id).reshape(-1)][:, valid]
             # else:
-                # import pdb
-                # pdb.set_trace()
 
             if obj_id is not None:
                 print("ln282")
@@ -337,6 +335,9 @@ class RGBDCamera(Camera):
             #     assert np.all(pcd_pts[:, 2] > depth_min - .01), (pcd_pts[pcd_pts[:, 2] <= depth_min - .01], obj_id)
 
             if return_uv_cam_only:
+                """
+                depth: 1D vector which is the number of points segmented, or max_u * max_v
+                """
                 return pcd_pts, pcd_rgb, depth, uv_one_in_cam.copy()
             elif return_ims:
                 assert len(seg_im.shape) == 2

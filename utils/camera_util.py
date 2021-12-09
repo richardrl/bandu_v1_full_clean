@@ -81,8 +81,6 @@ def get_joint_pointcloud(airobot_cameras,
     # Each point cloud is num_points X 3
     pointclouds = [output[0] for output in outputs]
 
-    import pdb
-    pdb.set_trace()
     if return_uv_cam_only:
         depth = [output[-2] for output in outputs]
         uv_one_in_cam = [output[-1] for output in outputs]
