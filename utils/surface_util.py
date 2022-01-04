@@ -15,13 +15,13 @@ def get_relative_rotation_from_binary_logits(rotated_pointcloud,
     """
 
     :param rotated_pointcloud: num_points x 3
-    :param binary_logits: num_points
+    :param binary_logits: num_points. DO NOT SIGMOID THIS FIRST!!
     :param dir: whether we find the rotation from the surface normal to the -z, or the rotation from -z to the surface normal
     :param com: center of mass, used to determine oriented normal
+    :param sigmoid_threshold: the threshold between 0 and 1. the binary logits will be sigmoided before going into this
     :return:
     """
     assert len(rotated_pointcloud.shape) == 2, rotated_pointcloud.shape
-
     if len(binary_logits.shape) == 2:
         binary_logits = binary_logits.squeeze(-1)
     assert len(binary_logits.shape) == 1, binary_logits.shape
@@ -30,6 +30,7 @@ def get_relative_rotation_from_binary_logits(rotated_pointcloud,
     surface_pcd = open3d.geometry.PointCloud()
     surface_pcd.points = open3d.utility.Vector3dVector(surface_points.cpu().data.numpy())
 
+    assert surface_points.shape[0] > 15
     try:
         print("using this many points...")
         print(np.min([15, surface_points.shape[0]]))
@@ -47,7 +48,7 @@ def get_relative_rotation_from_binary_logits(rotated_pointcloud,
             return transform_util.get_rotation_matrix_between_vecs(oriented_normal, [0, 0, -1]), plane_model
     except:
         print("Unable to find any points")
-        return np.eye(3), [1, 1, 1, 1]
+        return None, None
 
 
 def get_relative_rotation_from_obb(rotated_pointcloud, vis_o3d=False, gen_antiparallel_rotation=False,

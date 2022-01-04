@@ -870,7 +870,7 @@ class DGCNNCVAESeg(nn.Module):
 
         if self.multi_gpu:
             self.pointcloud_decoder.to(self.gpu_0)
-        nB, nO, num_points, _ = batch['rotated_pointcloud'].shape
+        nB, nO, num_points, channel = batch['rotated_pointcloud'].shape
         pc_X = batch['rotated_pointcloud'].reshape(-1, num_points, 3)
 
         if self.normalize:

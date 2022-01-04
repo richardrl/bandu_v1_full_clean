@@ -87,6 +87,9 @@ def create_arrow(vec, color, vis=None, vec_len=None, scale=.06, radius=.12, posi
     if vec_len is None:
         vec_len = (np.linalg.norm(vec))
 
+    if isinstance(vec, list):
+        vec = np.array(vec)
+
     mesh_arrow = open3d.geometry.TriangleMesh.create_arrow(
         cone_height=0.2 * vec_len * scale,
         cone_radius=0.06 * vec_len * radius,
@@ -115,3 +118,26 @@ def create_arrow(vec, color, vis=None, vec_len=None, scale=.06, radius=.12, posi
 
     mesh_arrow.paint_uniform_color(color)
     return mesh_arrow
+
+
+def make_color_map(pred):
+    # assumes nB sized tensor vector
+    np_tens = pred.cpu().data.numpy()
+    norm = mpl.colors.Normalize(vmin=np.min(np_tens), vmax=np.max(np_tens))
+    m = cm.ScalarMappable(norm=norm, cmap="viridis_r")
+    return m.to_rgba(np_tens)[:, :3]
+
+
+def make_colors(boolean_mask, threshold=.5, surface_color=[1., 0., 0.], background_color=[0., 0., 0.]):
+    final_colors = []
+    # assert len(boolean_mask.shape) == 1, boolean_mask.shape
+    found_surface_pts = 0
+    for point in boolean_mask:
+        if point < threshold:
+            # print("ln77 Found hit")
+            final_colors.append(surface_color)
+            found_surface_pts += 1
+        else:
+            final_colors.append(background_color)
+    print(f"ln236 found surface points: {found_surface_pts}")
+    return np.array(final_colors)

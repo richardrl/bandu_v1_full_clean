@@ -19,18 +19,18 @@ batch_size = 34
 
 # for use with CVAE Seg
 # encoder and decoder
+device = torch.device("cuda:0")
+rotated_pc_sum_vector = torch.zeros(3).to(device)
+rotated_pc_var_sum_vector = torch.zeros(3).to(device)
 
-rotated_pc_sum_vector = torch.zeros(3).to(torch.device("cuda:1"))
-rotated_pc_var_sum_vector = torch.zeros(3).to(torch.device("cuda:1"))
+rotated_normals_sum_vector = torch.zeros(3).to(device)
+rotated_normals_var_sum_vector = torch.zeros(3).to(device)
 
-rotated_normals_sum_vector = torch.zeros(3).to(torch.device("cuda:1"))
-rotated_normals_var_sum_vector = torch.zeros(3).to(torch.device("cuda:1"))
+canonical_pc_sum_vector = torch.zeros(3).to(device)
+canonical_pc_var_sum_vector = torch.zeros(3).to(device)
 
-canonical_pc_sum_vector = torch.zeros(3).to(torch.device("cuda:1"))
-canonical_pc_var_sum_vector = torch.zeros(3).to(torch.device("cuda:1"))
-
-rotated_quat_inv_sum_vector = torch.zeros(4).to(torch.device("cuda:1"))
-rotated_quat_inv_var_sum_vector = torch.zeros(4).to(torch.device("cuda:1"))
+rotated_quat_inv_sum_vector = torch.zeros(4).to(device)
+rotated_quat_inv_var_sum_vector = torch.zeros(4).to(device)
 
 total_num_points = 0
 
@@ -62,18 +62,18 @@ for phase in ['mean', 'var']:
     #                                            min_z_scale=.5,
     #                                            max_shear=.5,
     #                                            shear_aug="xy",
-    #                                            model_device=torch.device("cuda:1"),
+    #                                            model_device=device,
     #                                            use_normals=use_normals)
         if phase == "mean":
-            rotated_pc_sum_vector += batch['rotated_pointcloud'].reshape(-1, 3).sum(dim=0).to(torch.device("cuda:1"))
-            canonical_pc_sum_vector += batch['canonical_pointcloud'].reshape(-1, 3).sum(dim=0).to(torch.device("cuda:1"))
+            rotated_pc_sum_vector += batch['rotated_pointcloud'].reshape(-1, 3).sum(dim=0).to(device)
+            canonical_pc_sum_vector += batch['canonical_pointcloud'].reshape(-1, 3).sum(dim=0).to(device)
 
-            rqi = torch.Tensor(R.from_quat(batch['rotated_quat']).inv().as_quat()).sum(dim=0).to(torch.device("cuda:1"))
+            rqi = torch.Tensor(R.from_quat(batch['rotated_quat']).inv().as_quat()).sum(dim=0).to(device)
             rotated_quat_inv_sum_vector += rqi
 
             total_samples += batch['rotated_quat'].shape[0]
             if use_normals:
-                rotated_normals_sum_vector += batch['rotated_normals'].reshape(-1, 3).sum(dim=0).to(torch.device("cuda:1"))
+                rotated_normals_sum_vector += batch['rotated_normals'].reshape(-1, 3).sum(dim=0).to(device)
 
             print("ln34 rotated_pc_sum_vector")
             print(rotated_pc_sum_vector)
@@ -82,25 +82,25 @@ for phase in ['mean', 'var']:
             print(total_num_points)
         else:
             # phase == "rotated_pc_var"
-            rotated_pc_mean = (rotated_pc_sum_vector / total_num_points).to(torch.device("cuda:1"))
+            rotated_pc_mean = (rotated_pc_sum_vector / total_num_points).to(device)
 
-            rotated_pc_var_sum_vector += ((batch['rotated_pointcloud'].reshape(-1, 3).to(torch.device("cuda:1")) -
-                                           rotated_pc_mean) ** 2).sum(dim=0).to(torch.device("cuda:1"))
+            rotated_pc_var_sum_vector += ((batch['rotated_pointcloud'].reshape(-1, 3).to(device) -
+                                           rotated_pc_mean) ** 2).sum(dim=0).to(device)
 
-            rotated_quat_inv_mean = (rotated_quat_inv_sum_vector / total_samples).to(torch.device("cuda:1"))
+            rotated_quat_inv_mean = (rotated_quat_inv_sum_vector / total_samples).to(device)
 
 
-            rotated_quat_inv_var_sum_vector += ((torch.Tensor(R.from_quat(batch['rotated_quat']).inv().as_quat()).to(torch.device("cuda:1")) - \
-                                               rotated_quat_inv_mean.unsqueeze(0))**2).sum(dim=0).to(torch.device("cuda:1"))
+            rotated_quat_inv_var_sum_vector += ((torch.Tensor(R.from_quat(batch['rotated_quat']).inv().as_quat()).to(device) - \
+                                               rotated_quat_inv_mean.unsqueeze(0))**2).sum(dim=0).to(device)
 
-            canonical_pc_mean = (canonical_pc_sum_vector / total_num_points).to(torch.device("cuda:1"))
-            canonical_pc_var_sum_vector += ((batch['canonical_pointcloud'].reshape(-1, 3).to(torch.device("cuda:1")) -
-                                             canonical_pc_mean) ** 2).sum(dim=0).to(torch.device("cuda:1"))
+            canonical_pc_mean = (canonical_pc_sum_vector / total_num_points).to(device)
+            canonical_pc_var_sum_vector += ((batch['canonical_pointcloud'].reshape(-1, 3).to(device) -
+                                             canonical_pc_mean) ** 2).sum(dim=0).to(device)
 
             if use_normals:
                 rotated_normals_mean = rotated_normals_sum_vector / total_num_points
                 rotated_normals_var_sum_vector += ((batch['rotated_normals'].reshape(-1, 3) -
-                                                    rotated_normals_mean) ** 2).sum(dim=0).to(torch.device("cuda:1"))
+                                                    rotated_normals_mean) ** 2).sum(dim=0).to(device)
 
 rotated_pc_mean = rotated_pc_sum_vector / total_num_points
 rotated_pc_var = rotated_pc_var_sum_vector / (total_num_points - 1)

@@ -103,6 +103,7 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
                                                                                                       torch.as_tensor(found_bti.squeeze(-1)),
                                                                                                       min_z=min_z,
                                                                                                       max_z=max_z)
+                    print("Successfully found rotmat")
                 except Exception as e:
                     print("Failed to fit rotmat")
                     print(e)
@@ -151,6 +152,8 @@ def read_data_dir(samples_dir):
     assert samples_dir is not None
     assert samples_dir[-1] != "/"
     # object_dirs = absolute_dir_paths(Path(data_working_dir) / "samples")
+
+    # if this line fails, check that samples_dir is correct
     object_dirs = absolute_dir_paths(samples_dir)
 
     # column_names = ["filepath", "date", "take", "posX", "posY", "posZ", "quatX", "quatY", "quatZ", "quatW"]
