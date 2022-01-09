@@ -11,6 +11,8 @@ configs/losses/cvae_btb_loss_config.py out/canonical_pointclouds/test/fps_random
 out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples --stats_json=out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples/rr_pn_stats.json
 
 python3 train_relativerotation.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/losses/cvae_btb_loss_config.py out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples out/canonical_pointclouds/jan8_val/fps_randomizenoiseTrue_numfps10_samples --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json
+
+python3 train_relativerotation.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/losses/cvae_btb_loss_config.py out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples out/canonical_pointclouds/jan8_val/fps_randomizenoiseTrue_numfps10_samples --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json --batch_size=32 --gpu0=8 --gpu1=9 --device_id=9
 ```
 
 # Training loss visualization

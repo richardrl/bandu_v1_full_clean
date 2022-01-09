@@ -51,6 +51,8 @@ RUN set -eux; \
 	gosu nobody true
 # end gosu magic
 
+RUN apt-get update && apt-get install -y tmux
+
 # setup entrypoint
 COPY ./entrypoint.sh .
 
@@ -64,3 +66,4 @@ RUN chown docker:docker /home/docker
 
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["bash"]
+
