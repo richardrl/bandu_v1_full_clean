@@ -1,6 +1,7 @@
 #FROM ubuntu:bionic as intermediate
 
-FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu18.04
+#FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu18.04
+FROM nvidia/cuda:11.0-cudnn8-devel-ubuntu18.04
 
 ENV NVIDIA_VISIBLE_DEVICES ${NVIDIA_VISIBLE_DEVICES:-all}
 ENV NVIDIA_DRIVER_CAPABILITIES ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics
@@ -12,10 +13,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 
 RUN apt-get install -y python3 python3-pip
-
-COPY requirements.txt /root/requirements.txt
-
-WORKDIR /root
 
 RUN apt-get install -y python3-dev python3-setuptools
 
@@ -37,11 +34,32 @@ RUN pip3 install wandb==0.10.28
 RUN pip3 install nflows==0.14
 RUN pip3 install torch==1.9.0
 
+# it's important we work with /home/directory after switching users, or else we would have permissions issues
+COPY ../requirements.txt /root/requirements.txt
+
+WORKDIR /root
+
 RUN --mount=type=cache,target=/root/.cache \
     pip3 install -r requirements.txt
 
+# use gosu to switch from root to host user ID so we don't run into permissions issues
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y gosu; \
+	rm -rf /var/lib/apt/lists/*; \
+# verify that the binary works
+	gosu nobody true
+# end gosu magic
+
 # setup entrypoint
 COPY ./entrypoint.sh .
+
+RUN groupadd -r -g 999 docker && useradd -r -g docker -u 999 docker
+
+# these lines are critical. they allow the docker user access to all mounts
+RUN chown docker:docker /home
+RUN mkdir /home/docker
+RUN chown docker:docker /home/docker
 
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["bash"]

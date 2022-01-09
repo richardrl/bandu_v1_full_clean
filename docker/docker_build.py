@@ -41,12 +41,10 @@ def execute_build(args):
 
 
 if __name__ == '__main__':
-    default_image_name = "richardrl/bandu_v1"
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-i', '--image', type=str,
-                        default=default_image_name,
+                        default="richardrl/bandu_v1",
                         help='name for new docker image')
 
     parser.add_argument('--no_cache', action='store_true',

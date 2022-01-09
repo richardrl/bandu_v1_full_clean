@@ -10,6 +10,7 @@ python3 train_relativerotation.py configs/models/8-19-21-dgcnn_mog_predict_forwa
 configs/losses/cvae_btb_loss_config.py out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples 
 out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples --stats_json=out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples/rr_pn_stats.json
 
+python3 train_relativerotation.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/losses/cvae_btb_loss_config.py out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples out/canonical_pointclouds/jan8_val/fps_randomizenoiseTrue_numfps10_samples --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json
 ```
 
 # Training loss visualization
@@ -74,6 +75,8 @@ louds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json /data/
 
 # Docker 
 To write to files in the mounted volume, make an "out" folder with permissions 777.
+
+We need cuda10 to visualize. cuda11 to run on 3090 gtx cards.
 
 # Credits
 

@@ -2,6 +2,8 @@
 # a new container
 
 IMAGE=richardrl/bandu_v1:latest
+#IMAGE=richardrl/bandu_v1:with_root
+
 XAUTH=/tmp/.docker.xauth
 if [ ! -f $XAUTH ]
 then
@@ -21,11 +23,12 @@ docker run -it \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     --env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
-    --volume="$PWD/../:/root/bandu_v1_full_clean":Z \
+    --volume="$PWD/../:/home/docker/bandu_v1_full_clean":Z \
     --volume="/data/pulkitag/models/rli14/realsense_docker/:/data/pulkitag/models/rli14/realsense_docker":Z \
     --privileged \
     --runtime=nvidia \
     --net=host \
     -e WANDB_API_KEY \
+    -e uid=$(id -u)\
     ${IMAGE} \
     bash
