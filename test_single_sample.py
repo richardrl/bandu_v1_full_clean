@@ -45,6 +45,13 @@ batch = dict()
 # this is the real image pkl
 pcd = vis_util.make_point_cloud_o3d(sample_pkl['points'],
                                                                     color=sample_pkl['colors'])
+
+obb = open3d.geometry.OrientedBoundingBox()
+obb = obb.create_from_points(pcd.points)
+
+# center at COM
+pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - obb.get_center())
+
 batch['rotated_pointcloud'] = torch.from_numpy(np.array(pcd.voxel_down_sample(voxel_size=0.004).points)).unsqueeze(0).unsqueeze(0)
 assert batch['rotated_pointcloud'].shape[2] > 1024 and batch['rotated_pointcloud'].shape[2] < 2048, batch['rotated_pointcloud'].shape
 

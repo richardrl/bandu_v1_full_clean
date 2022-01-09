@@ -16,28 +16,42 @@ We use Wandb to visualize losses during training.
 You are welcome to roll your own visualization, just comment out the lines involving wandb.
 
 # Generating data
-### SO(3) augmentation
+### SO(3) augmentation only
 
 ```
 cd bandu_v1_full_clean
 
-python3 data_generation/1_generate_pointclouds_v2.py parts/main/bandu_train/ test --no_table --no_simulate
+python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_train/ test --no_table --no_simulate
 
 python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointclouds/bandu_train/test/canonical_pointcloud_samples 2 1
  
 python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/bandu_train/test/fps_randomizenoiseTrue_numfps2_samples 0
 ```
 
+### Standard augmentation used in training for our paper
+
+```
+cd bandu_v1_full_clean
+
+python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_train/ jan8_train --num_samples=10
+
+python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointclouds/jan8_train/canonical_pointcloud_samples 10 1
+ 
+python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples 0
+```
+
 ### Viewing sample pkl
 
 ```
-python3 5_visualize_sample_pkl.py ~/bandu_v1_full_clean/out/canonical_pointclouds/test/canonical_pointcloud_samples/Egg\ v2/0.pkl
-```
-
-# Loading model and evaluating
+python3 5_visualize_sample_pkl.py ~/bandu_v1_full_clean/out/canonical_pointclouds/test/canonical_pointcloud_samples/Egg\ v2/0.pkl out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/sundisk/4.pkl
 
 ```
-python3 test_single_sample.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py /root/bandu_v1_full_clean/out/spring-plasma-2020_checkpoint240 --stats_json=out/canonical_pointclouds/bandu_train/test/fps_randomizenoiseTrue_numfps2_samples/rr_pn_stats.json
+
+# Loading model and evaluating on real samples
+
+```
+python3 test_single_sample.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py /root/bandu_v1_full_clean/out/spring-plasma-2020_checkpoint240 --stats_json=out/canonical_pointc
+louds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json /data/pulkitag/models/rli14/realsense_docker/out/samples/01-09-2022_00:36:11_Cross.torch
 
 ```
 
