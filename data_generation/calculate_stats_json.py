@@ -10,9 +10,14 @@ from data_generation.dataset import PointcloudDataset
 from scipy.spatial.transform import Rotation as R
 
 # ic_path = "out/canonical_pointclouds/combined1/normals_test/initconfig"
+"""
+Settings
+"""
 train_dset_samples_dir = sys.argv[1]
 use_normals = int(sys.argv[2])
 batch_size = 34
+threshold_frac = .02
+
 # num_epochs = 100
 
 # train_pcs = torch.load(ic_path)['pcs']
@@ -36,8 +41,9 @@ total_num_points = 0
 
 train_dset = PointcloudDataset(train_dset_samples_dir,
                                stats_dic=None,
-                               threshold_frac=.04)
-train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=batch_size, drop_last=True, shuffle=True)
+                               threshold_frac=threshold_frac)
+train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=batch_size, drop_last=True, shuffle=True,
+                           num_workers=16)
 
 print("ln37 total dset samples")
 print(train_dset.__len__())

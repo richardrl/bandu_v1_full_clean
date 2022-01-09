@@ -10,6 +10,7 @@ import itertools
 import time
 import numpy as np
 from scipy.spatial.transform.rotation import Rotation as R
+import os
 
 
 # original_data_dir = "/home/richard/improbable/spinningup/out/canonical_pointclouds/bandu_val/test_v2/samples"
@@ -27,6 +28,8 @@ object_names = pcdset_original.data_df.object_name.unique()
 
 for obj_name in object_names:
     fd_dir = new_samples_dir / obj_name
+
+    os.umask(0)
     fd_dir.mkdir(parents=True, exist_ok=True)
 
 cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,

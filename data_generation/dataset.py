@@ -103,10 +103,11 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
                                                                                                       torch.as_tensor(found_bti.squeeze(-1)),
                                                                                                       min_z=min_z,
                                                                                                       max_z=max_z)
-                    print("Successfully found rotmat")
+                    # TODO: fix this
+                    # print("Successfully found rotmat")
                 except Exception as e:
-                    print("Failed to fit rotmat")
-                    print(e)
+                    # print("Failed to fit rotmat")
+                    # print(e)
                     continue
                 # print(relative_rotmat)
                 found_rotmats_distance_to_identity.append(np.linalg.norm(relative_rotmat - np.eye(3)))

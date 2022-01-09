@@ -178,8 +178,9 @@ val_dset = PointcloudDataset(args.val_dset_path,
                              randomize_z_canonical=args.randomize_z_canonical,
                              further_downsample_frac=args.further_downsample_frac)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True,
-                           num_workers=0)
-val_dloader = DataLoader(val_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True)
+                           num_workers=8)
+val_dloader = DataLoader(val_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True,
+                         num_workers=8)
 
 get_loss_and_diag_dict = misc_util.load_ldd_function_from_filepath(args.ldd_config)
 

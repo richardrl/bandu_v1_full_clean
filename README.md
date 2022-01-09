@@ -2,6 +2,7 @@
 - Contact plane registration implementation
 - CVAE models, including implementation of Mixture of Gaussian prior
 - CVAE loss functions
+- Highly-parallelized data generation
 
 # Training
 ```
@@ -30,6 +31,11 @@ python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/bandu_
 
 ### Standard augmentation used in training for our paper
 
+10 samples in simulator per object
+
+10 farthest point samples for each of the above samples
+
+Train
 ```
 cd bandu_v1_full_clean
 
@@ -38,6 +44,17 @@ python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_trai
 python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointclouds/jan8_train/canonical_pointcloud_samples 10 1
  
 python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples 0
+```
+
+Val 
+```
+cd bandu_v1_full_clean
+
+python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_val/ jan8_val --num_samples=10
+
+python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointclouds/jan8_val/canonical_pointcloud_samples 10 1
+ 
+python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/jan8_val/fps_randomizenoiseTrue_numfps10_samples 0
 ```
 
 ### Viewing sample pkl
