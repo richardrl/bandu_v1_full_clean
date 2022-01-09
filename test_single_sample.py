@@ -3,11 +3,13 @@ from utils import misc_util, train_util, surface_util, vis_util
 import open3d
 import argparse
 import numpy as np
+import json
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('hyper_config', help="Hyperparams config python file.")
 parser.add_argument('sc_checkpoint', help="Model checkpoint: surface_classifier")
+parser.add_argument('sample_path')
 parser.add_argument('--stats_json')
 parser.add_argument('--device_id', default=0)
 
@@ -28,18 +30,29 @@ models_dict['surface_classifier'].load_state_dict(sd['model'])
 
 
 # load sample
-sample_path = "/root/bandu_v1_full_clean/out/canonical_pointclouds/bandu_train/test/fps_randomizenoiseTrue_numfps2_samples/Knight Shape/1.pkl"
+# sample_path = "/root/bandu_v1_full_clean/out/canonical_pointclouds/bandu_train/test/fps_randomizenoiseTrue_numfps2_samples/Knight Shape/1.pkl"
 
-sample_pkl = torch.load(sample_path)
+# sample_path = "/root/bandu_v1_full_clean/out/aggregate_pc.torch"
+
+sample_pkl = torch.load(args.sample_path)
 
 predictions_num_z = 1
 
 batch = dict()
 
 # num_points, 3 -> 1, 1, num_points, 3
-batch['rotated_pointcloud'] = torch.from_numpy(sample_pkl['rotated_pointcloud']).unsqueeze(0).unsqueeze(0)
 
-import json
+# this is the real image pkl
+pcd = vis_util.make_point_cloud_o3d(sample_pkl['points'],
+                                                                    color=sample_pkl['colors'])
+batch['rotated_pointcloud'] = torch.from_numpy(np.array(pcd.voxel_down_sample(voxel_size=0.004).points)).unsqueeze(0).unsqueeze(0)
+assert batch['rotated_pointcloud'].shape[2] > 1024 and batch['rotated_pointcloud'].shape[2] < 2048, batch['rotated_pointcloud'].shape
+
+# center pointcloud
+batch['rotated_pointcloud'] -= batch['rotated_pointcloud'].mean(axis=2)
+
+# below is if we have the training file pkl
+# batch['rotated_pointcloud'] = torch.from_numpy(sample_pkl['rotated_pointcloud']).unsqueeze(0).unsqueeze(0)
 
 with open(args.stats_json, "r") as fp:
     stats_dic = json.load(fp)
@@ -58,13 +71,12 @@ mat, plane_model = surface_util.get_relative_rotation_from_binary_logits(batch['
 
 geoms_to_draw = []
 
-import pdb
-pdb.set_trace()
+
 box, box_centroid = surface_util.gen_surface_box(plane_model, ret_centroid=True, color=[0, 0, .5])
 geoms_to_draw.append(vis_util.create_arrow(plane_model[:3], [0., 0., .5],
                                              position=box_centroid,
-                                           object_com=sample_pkl['position'])
-                                             # object_com=np.zeros(3)),
+                                           # object_com=sample_pkl['position'])
+                                             object_com=np.zeros(3)),
                      )
 geoms_to_draw.append(box)
 
@@ -75,5 +87,3 @@ geoms_to_draw.append(vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0
 geoms_to_draw.append(open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0]))
 open3d.visualization.draw_geometries(geoms_to_draw)
 # run model on sample
-import pdb
-pdb.set_trace()

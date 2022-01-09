@@ -22,6 +22,7 @@ docker run -it \
     --env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
     --volume="$PWD/../:/root/bandu_v1_full_clean":Z \
+    --volume="/data/pulkitag/models/rli14/realsense_docker/:/data/pulkitag/models/rli14/realsense_docker":Z \
     --privileged \
     --runtime=nvidia \
     --net=host \

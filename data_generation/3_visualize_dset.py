@@ -1,9 +1,8 @@
-from supervised_training.data_generation.dataset import PointcloudDataset
+from data_generation.dataset import PointcloudDataset
 import open3d as o3d
-from bandu.utils import *
+from utils import *
 import sys
 import numpy as np
-from supervised_training.utils.visualization_util import make_colors
 
 # load dset
 pcd_dset = PointcloudDataset(sys.argv[1],
@@ -19,12 +18,12 @@ pcd_dset = PointcloudDataset(sys.argv[1],
 sample_idx = np.random.randint(0, pcd_dset.__len__())
 
 # load sample
-sample = pcd_dset.__getitem__(2000)
+sample = pcd_dset.__getitem__(3)
 
-# visualize
+# visualize labels
 # vpcd = vis_util.make_point_cloud_o3d(sample['rotated_pointcloud'][0], color=[0.,0.,0.])
 vpcd = vis_util.make_point_cloud_o3d(sample['rotated_pointcloud'][0],
-                                     color=make_colors(sample['bottom_thresholded_boolean']))
+                                     color=vis_util.make_colors(sample['bottom_thresholded_boolean']))
 
 # load sample
 # sample = pcd_dset.__getitem__(1)
