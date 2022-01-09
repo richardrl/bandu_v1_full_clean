@@ -57,6 +57,7 @@ COPY ./entrypoint.sh .
 RUN groupadd -r -g 999 docker && useradd -r -g docker -u 999 docker
 
 # these lines are critical. they allow the docker user access to all mounts
+# https://stackoverflow.com/questions/23544282/what-is-the-best-way-to-manage-permissions-for-docker-shared-volumes
 RUN chown docker:docker /home
 RUN mkdir /home/docker
 RUN chown docker:docker /home/docker

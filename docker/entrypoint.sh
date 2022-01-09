@@ -21,6 +21,9 @@ usermod -u $CURRENT_UID docker
 #useradd --shell /bin/bash -u $CURRENT_UID -o -c "" -m docker
 
 # Execute process
+
+cd /home/docker
+
 exec gosu docker "$@"
 # gosu magic
 
