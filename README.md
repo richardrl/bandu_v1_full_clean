@@ -67,11 +67,19 @@ python3 5_visualize_sample_pkl.py ~/bandu_v1_full_clean/out/canonical_pointcloud
 
 ```
 
-# Loading model and evaluating on real samples
+# Loading model and evaluating samples
+
+## Real samples
 
 ```
-python3 test_single_sample.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py /root/bandu_v1_full_clean/out/spring-plasma-2020_checkpoint240 --stats_json=out/canonical_pointc
+python3 test_single_real_sample.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py /root/bandu_v1_full_clean/out/spring-plasma-2020_checkpoint240 --stats_json=out/canonical_pointc
 louds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json /data/pulkitag/models/rli14/realsense_docker/out/samples/01-09-2022_00:36:11_Cross.torch
+
+```
+
+## Sim samples
+```
+python3 visualize_simulated_classified_surface_points.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py wandb/run-20220110_003726-cbdk34il/files/vocal-fire-24_checkpoint416 out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples  --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json
 
 ```
 

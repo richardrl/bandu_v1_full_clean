@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import open3d as o3d
+import matplotlib as mpl
 
 
 def make_point_cloud_o3d(points, color):
@@ -124,7 +125,7 @@ def make_color_map(pred):
     # assumes nB sized tensor vector
     np_tens = pred.cpu().data.numpy()
     norm = mpl.colors.Normalize(vmin=np.min(np_tens), vmax=np.max(np_tens))
-    m = cm.ScalarMappable(norm=norm, cmap="viridis_r")
+    m = mpl.cm.ScalarMappable(norm=norm, cmap="viridis_r")
     return m.to_rgba(np_tens)[:, :3]
 
 

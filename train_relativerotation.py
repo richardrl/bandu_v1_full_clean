@@ -17,7 +17,7 @@ parser.add_argument('--load_optim', action='store_true')
 parser.add_argument('--lr', type=float, default=0.0003)
 parser.add_argument('--kld_weight', type=float, default=.00001)
 parser.add_argument('--batch_size', type=int, default=8)
-parser.add_argument('--checkpoint_freq', type=int, default=1)
+parser.add_argument('--checkpoint_freq', type=int, default=10)
 parser.add_argument('--evaluation_freq', type=int, default=1, help="Evaluate every n epochs")
 parser.add_argument('--augment_mesh_freq', type=int, default=100)
 

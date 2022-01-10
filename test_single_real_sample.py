@@ -44,7 +44,7 @@ batch = dict()
 
 # this is the real image pkl
 pcd = vis_util.make_point_cloud_o3d(sample_pkl['points'],
-                                                                    color=sample_pkl['colors'])
+                                    color=sample_pkl['colors'])
 
 obb = open3d.geometry.OrientedBoundingBox()
 obb = obb.create_from_points(pcd.points)
@@ -83,7 +83,7 @@ box, box_centroid = surface_util.gen_surface_box(plane_model, ret_centroid=True,
 geoms_to_draw.append(vis_util.create_arrow(plane_model[:3], [0., 0., .5],
                                              position=box_centroid,
                                            # object_com=sample_pkl['position'])
-                                             object_com=np.zeros(3)),
+                                             object_com=np.zeros(3)), # because the object has been centered
                      )
 geoms_to_draw.append(box)
 
