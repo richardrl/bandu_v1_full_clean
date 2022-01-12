@@ -51,6 +51,7 @@ from utils.env_evaluation_util import evaluate_using_env
 import importlib
 import json
 from pathlib import Path
+import pybullet as p
 
 spec = importlib.util.spec_from_file_location("env_config", args.env_config)
 env_config = importlib.util.module_from_spec(spec)

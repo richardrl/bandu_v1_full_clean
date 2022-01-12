@@ -146,6 +146,27 @@ def load_bandu_objects(table_offset=(-.8, .2, 0),
         return pybullet_body_ids_list
 
 
+def get_number_stacked_objects(table_id, plane_id, total_objs):
+    """
+    :param table_id:
+    :param plane_id:
+    :param total_objs: Total number of Bandu objects
+    :return:
+    """
+
+    # counts the number of objects which are NOT in contact with the table
+    # adds number of base objects allowed to touch the table
+    # to get final number of stacked objects
+    cp = p.getContactPoints()
+
+    bodies_found_on_table = [tup[2] for tup in cp if (tup[1] == table_id and tup[1] != plane_id)]
+    out = total_objs - len(set(bodies_found_on_table)) + 1
+    assert out > 0
+    print("ln874 num stacked")
+    print(out)
+    return out
+
+
 def remove_bandu_objects(num_bandu_objects_to_remove, total_bandu_objects=None, total_scene_objects = 2):
     """
     Remove bandu objects by

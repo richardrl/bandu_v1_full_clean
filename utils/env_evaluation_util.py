@@ -18,7 +18,7 @@ import json
 import copy
 # from bandu.imports.bingham_rotation_learning.qcqp_layers import A_vec_to_quat
 import os
-from utils import color_util, camera_util, pointcloud_util, surface_util
+from utils import color_util, camera_util, pointcloud_util, surface_util, pb_util
 # from imports.ipdf import models as ipdf_models
 from policies.handcrafted import handcrafted_policy1
 

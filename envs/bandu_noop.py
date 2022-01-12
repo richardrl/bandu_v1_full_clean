@@ -667,7 +667,7 @@ class BanduNoopEnv(gym.Env):
                 while not (bool(p.getContactPoints(pybullet_oid, max_height_obj)) or
                            bool(p.getContactPoints(pybullet_oid, self.table_id))) and count < 300000:
                     count += 1
-                    print("ln460 going down")
+                    print(f"ln460 going down {count}")
                     print(target_pos + offset)
                     print(p.getContactPoints(pybullet_oid, max_height_obj))
                     offset -= .000001
@@ -696,7 +696,7 @@ class BanduNoopEnv(gym.Env):
 
         # after putting it right above the tower, take a nap
         # time.sleep(5)
-        pb_util.pb_key_loop("m")
+        # pb_util.pb_key_loop("m")
 
         if debug_rotation_angle:
             print("219")
@@ -813,7 +813,8 @@ class BanduNoopEnv(gym.Env):
                 pointcloud, uv_one_in_cam, depths = camera_util.get_joint_pointcloud(self.cameras,
                                                                                      obj_id=current_oid,
                                                                                      filter_table_height=False,
-                                                                                     return_ims=True)
+                                                                                     return_ims=False,
+                                                                                     return_uv_cam_only=True)
 
                 pointclouds.append(pointcloud)
                 uv_one_in_cams.append(uv_one_in_cam)

@@ -13,9 +13,9 @@ import glob
 
 from pathlib import Path
 
-from bandu.utils import bandu_util
+from utils import bandu_util
 import os
-from supervised_training.utils.pb_spinningup_util import get_object_height
+from utils.pb_util import get_object_height
 
 from bandu.config import TABLE_HEIGHT
 
@@ -49,7 +49,7 @@ urdfs += [f for f in glob.glob(str(Path(urdf_dir) / "**/*.URDF"), recursive=True
 height_dict = dict()
 best_theta_list_dict = dict()
 
-results_save_dir = "/home/richard/Desktop/bandu_results/results dicts"
+results_save_dir = "out/bandu_results"
 
 p.connect(p.DIRECT)
 for urdf_path in urdfs:
@@ -101,14 +101,14 @@ for path in sorted(step_1_json_paths):
     # extract object names
     objects_folder_name = os.path.basename(os.path.dirname(path))
 
-    non_foundation_obj_name = objects_folder_name.split("_foundation")[0]
+    non_foundation_obj_name = objects_folder_name.split("foundation_")[1]
 
     obj_height = height_dict[non_foundation_obj_name]
 
     with open(path, "r") as fp:
         dic = json.load(fp)
 
-    urdf_path = Path("/home/richard/improbable/spinningup/parts/urdfs/main/engmikedset") / non_foundation_obj_name
+    urdf_path = Path(urdf_dir) / non_foundation_obj_name
 
     if "best_theta" not in dic.keys():
         best_theta_list_dict[non_foundation_obj_name].append(99)

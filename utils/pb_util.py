@@ -21,6 +21,7 @@ def pb_key_loop(key):
     :param key:
     :return:
     """
+    print(f"Press {key} to continue...")
     while 1:
         keys = p.getKeyboardEvents()
         if ord(key) in keys and keys[ord(key)] & p.KEY_WAS_RELEASED:
