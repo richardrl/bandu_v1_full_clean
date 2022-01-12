@@ -101,10 +101,23 @@ python3 visualize_simulated_classified_surface_points.py configs/models/8-19-21-
 TODO: get it working without block base
 
 ```
-python3 environment_evaluation/visualize_trained_eval_in_environment_rollout.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/envs/bandu_train_cameraon_verticalurdfs_sequential_cmvscvaecm.py --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json --results_dir=out/env_eval/  --sc_checkpoint=out/spring-plasma-2020_checkpoint240 --block_base
+python3 environment_evaluation/1_visualize_trained_eval_in_environment_rollout.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/envs/bandu_train_cameraon_verticalurdfs_sequential_cmvscvaecm.py --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json --results_dir=out/env_eval/  --sc_checkpoint=out/spring-plasma-2020_checkpoint240 --block_base
+```
+
+Change the results_dir, device ID and seed when parallelizing this evaluation over multiple GPUs
+```
+python3 environment_evaluation/1_visualize_trained_eval_in_environment_rollout.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/envs/bandu_train_cameraon_verticalurdfs_sequential_cmvscvaecm.py --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json --results_dir=out/vocal-fire-24/env_eval_visiongpu51_gpu6/  --sc_checkpoint=wandb/run-20220110_003726-cbdk34il/files/vocal-fire-24_checkpoint600 --block_base --device_id=6 --seed=516
 
 ```
 
+```
+
+cd environment_evaluation 
+
+python3 2_calculate_success_rate_2block.py ../parts/urdfs/main/engmikedset/ ../out/ 50
+
+python3 
+```
 # Docker 
 To write to files in the mounted volume, make an "out" folder with permissions 777.
 

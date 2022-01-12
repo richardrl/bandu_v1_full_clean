@@ -55,6 +55,7 @@ RUN apt-get update && apt-get install -y tmux
 
 RUN pip3 install gym
 RUN pip3 install urdfpy
+RUN pip3 install seaborn
 
 # setup entrypoint
 COPY ./entrypoint.sh .

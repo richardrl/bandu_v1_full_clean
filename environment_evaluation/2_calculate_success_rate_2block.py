@@ -49,7 +49,7 @@ urdfs += [f for f in glob.glob(str(Path(urdf_dir) / "**/*.URDF"), recursive=True
 height_dict = dict()
 best_theta_list_dict = dict()
 
-results_save_dir = "out/bandu_results"
+results_save_dir = "../out/bandu_results"
 
 p.connect(p.DIRECT)
 for urdf_path in urdfs:
@@ -71,7 +71,7 @@ for urdf_path in urdfs:
 
 import json
 
-with open("height_dict.json", "w") as fp:
+with open(str(Path(results_save_dir) / "height_dict.json"), "w") as fp:
     json.dump(height_dict, fp, indent=4)
 
 # results_dir = "/home/richard/data/results/engmikedset_dgcnn_mog5_unitvar"

@@ -670,7 +670,7 @@ def get_batch_from_state(s, model_device, num_points, stats_dic=None, threshold_
         centered_pc.append(original_pc - s['current_pos'][obj_id])
 
     fps_centered_pc = []
-    np.random.seed(0)
+    # np.random.seed(0)
     for pc in centered_pc:
         print("ln672 pc")
         print(pc[0])

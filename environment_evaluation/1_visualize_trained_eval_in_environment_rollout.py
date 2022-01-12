@@ -157,5 +157,5 @@ mean_s, scores = evaluate_using_env(env, models_dict, MODEL_DEVICE, pb_loop=args
                                     gen_antiparallel_rotation=args.gen_antiparallel_rotation)
 print(f"Average stacked: {mean_s}")
 
-with open(f"out/phase{args.phase}_scores_meanstacked{mean_s}.json", "w") as fp:
+with open(f"../out/out/phase{args.phase}_scores_meanstacked{mean_s}.json", "w") as fp:
     json.dump(scores, fp)
