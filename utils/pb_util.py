@@ -14,6 +14,20 @@ def get_abbs(pybullet_oid):
     return aabbs
 
 
+import time
+def pb_key_loop(key):
+    """
+    Wait for key before breaking a while loop
+    :param key:
+    :return:
+    """
+    while 1:
+        keys = p.getKeyboardEvents()
+        if ord(key) in keys and keys[ord(key)] & p.KEY_WAS_RELEASED:
+            break
+        time.sleep(.1)
+
+
 def get_object_max_height(pybullet_obj_id, ret_aabbs=False):
     aabbs = get_abbs(pybullet_obj_id)
     max_height = max([aabb[1][-1] for aabb in aabbs])
