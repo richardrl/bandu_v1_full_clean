@@ -42,7 +42,7 @@ class BanduNoopEnv(gym.Env):
                  stl_dir=None,
                  start_rotation_type=None,
                  forward_sim_steps=500,
-                 cam_pkl=Path(config.BANDU_ROOT) / "pybullet/cams/front_cam0.pkl",
+                 cam_pkl=Path(config.BANDU_ROOT) / "cameras/front_cam0.pkl",
                  debug=False,
                  randomize_mesh_vertices=True,
                  p_connect_type=p.DIRECT,

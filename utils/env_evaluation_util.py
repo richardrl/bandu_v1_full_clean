@@ -18,8 +18,9 @@ import json
 import copy
 # from bandu.imports.bingham_rotation_learning.qcqp_layers import A_vec_to_quat
 import os
-from utils import color_util, camera_util
+from utils import color_util, camera_util, pointcloud_util, surface_util
 # from imports.ipdf import models as ipdf_models
+from policies.handcrafted import handcrafted_policy1
 
 
 def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episodes=100, display_loss=True,
@@ -39,6 +40,7 @@ def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episod
     """
     cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,
                                         camera_forward_z_offset=.2)
+
     if img_render_dir is not None:
         ird_path = Path(img_render_dir)
         ird_path.mkdir(exist_ok=True, parents=True)
@@ -67,76 +69,98 @@ def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episod
         print("\n\n RESET")
         if pb_loop:
             pb_util.pb_key_loop("n")
-        try:
-            if img_render_dir is not None:
-                # ep_dir = Path(img_render_dir) / "_".join(s['object_names']) / str(ep_idx)
-                ep_dir = Path(img_render_dir) / "_".join(s['object_names'])
-                ep_dir.mkdir(exist_ok=True, parents=True)
-                img = env.render(scale_factor=1/2)
-                pil_img = Image.fromarray(img, 'RGB')
+        # try:
+        if img_render_dir is not None:
+            # ep_dir = Path(img_render_dir) / "_".join(s['object_names']) / str(ep_idx)
+            ep_dir = Path(img_render_dir) / "_".join(s['object_names'])
+            ep_dir.mkdir(exist_ok=True, parents=True)
+            img = env.render(scale_factor=1/2)
+            pil_img = Image.fromarray(img, 'RGB')
 
-                pth = ep_dir / f"ep{ep_idx}_0.png"
-                pil_img.save(pth)
+            pth = ep_dir / f"ep{ep_idx}_0.png"
+            pil_img.save(pth)
 
-            for timestep in range(env.num_objects + 2 + int(block_base)):
-                # now run policy and do physics simulation
-                # try:
-                batch = get_batch_from_state(s, model_device, fps_num_points, stats_dic=stats_dic,
-                                             linear_search=linear_search, cameras=cameras)
-                # except Exception as e:
-                #     print("ln83 e")
-                #     print(e)
-                #     break
-                # if display_loss:
-                #     gt_a = handcrafted_policy1(s)
-                #     print(f"ln114 gt_a range(-1, num_objects): {int(gt_a['selected_object_id'])}")
-                #     print(f"ln152 selected_object_id range(-1, num_objects): {int(selected_object_id.data.cpu())}")
-                #
-                #     target = gt_a['selected_object_id'] + 1
-                #
-                #     pred = predicted_logits.squeeze(dim=-1)
-                #
-                #     assert len(pred.shape) == 2, pred.shape
-                #
-                #     loss = F.cross_entropy(pred, torch.Tensor([target]).to(pred.device).long())
-                #     print(f"ln122 single sample_idx loss: {float(loss.data.cpu())}")
+        for timestep in range(env.num_objects + 2 + int(block_base)):
+            # now run policy and do physics simulation
+            # try:
+            batch = get_batch_from_state(s, model_device, fps_num_points, stats_dic=stats_dic,
+                                         linear_search=linear_search, cameras=cameras)
+            # except Exception as e:
+            #     print("ln83 e")
+            #     print(e)
+            #     break
+            # if display_loss:
+            #     gt_a = handcrafted_policy1(s)
+            #     print(f"ln114 gt_a range(-1, num_objects): {int(gt_a['selected_object_id'])}")
+            #     print(f"ln152 selected_object_id range(-1, num_objects): {int(selected_object_id.data.cpu())}")
+            #
+            #     target = gt_a['selected_object_id'] + 1
+            #
+            #     pred = predicted_logits.squeeze(dim=-1)
+            #
+            #     assert len(pred.shape) == 2, pred.shape
+            #
+            #     loss = F.cross_entropy(pred, torch.Tensor([target]).to(pred.device).long())
+            #     print(f"ln122 single sample_idx loss: {float(loss.data.cpu())}")
 
-                print(f"ln112 visited (before step): {s['visited']}")
+            print(f"ln112 visited (before step): {s['visited']}")
 
-                action_dict = dict()
+            action_dict = dict()
 
-                if "activevsnoop_classifier" in models_dict.keys():
-                    selected_object_id = get_selected_oid(models_dict, batch)
-                    action_dict['selected_object_id']= selected_object_id
+            if "activevsnoop_classifier" in models_dict.keys():
+                selected_object_id = get_selected_oid(models_dict, batch)
+                action_dict['selected_object_id']= selected_object_id
+            else:
+                selected_object_id = handcrafted_policy1(s, block_base=block_base)['selected_object_id']
+                action_dict['selected_object_id'] = selected_object_id
+
+            if selected_object_id < 0:
+                assert timestep > 0
+                break
+
+            sample_idx = 0
+            canonical_pc = qrot(R.from_quat(batch['current_quats'][selected_object_id]).inv().as_quat(),
+                                batch['rotated_pointcloud'][sample_idx][selected_object_id])
+            if use_pca_obb:
+                assert not use_gt_pts
+                if gen_antiparallel_rotation:
+                    relative_rotmat, relative_rotmat2 = surface_util.get_relative_rotation_from_obb(batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                                                                                  vis_o3d=vis_o3d, gen_antiparallel_rotation=True)
                 else:
-                    selected_object_id = handcrafted_policy1(s, block_base=block_base)['selected_object_id']
-                    action_dict['selected_object_id'] = selected_object_id
+                    relative_rotmat = surface_util.get_relative_rotation_from_obb(batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                                                                          vis_o3d=vis_o3d)
+            elif use_ransac_full_pc:
+                starting_pc_original = batch['rotated_pointcloud'][sample_idx][selected_object_id].detach()
+                starting_pc = batch['rotated_pointcloud'][sample_idx][selected_object_id]
 
-                if selected_object_id < 0:
-                    assert timestep > 0
-                    break
+                starting_pc_device = copy.deepcopy(starting_pc.device)
+                # nB, nO, num_points, _ = starting_pc.shape
+                num_points = starting_pc.shape[0]
 
-                sample_idx = 0
-                canonical_pc = qrot(R.from_quat(batch['current_quats'][selected_object_id]).inv().as_quat(),
-                                    batch['rotated_pointcloud'][sample_idx][selected_object_id])
-                if use_pca_obb:
-                    assert not use_gt_pts
-                    if gen_antiparallel_rotation:
-                        relative_rotmat, relative_rotmat2 = surface_util.get_relative_rotation_from_obb(batch['rotated_pointcloud'][sample_idx][selected_object_id],
-                                                                                      vis_o3d=vis_o3d, gen_antiparallel_rotation=True)
-                    else:
-                        relative_rotmat = surface_util.get_relative_rotation_from_obb(batch['rotated_pointcloud'][sample_idx][selected_object_id],
-                                                                              vis_o3d=vis_o3d)
-                elif use_ransac_full_pc:
-                    starting_pc_original = batch['rotated_pointcloud'][sample_idx][selected_object_id].detach()
-                    starting_pc = batch['rotated_pointcloud'][sample_idx][selected_object_id]
+                rr_arr, plane_model_arr, heights_arr = [], [], []
 
-                    starting_pc_device = copy.deepcopy(starting_pc.device)
-                    # nB, nO, num_points, _ = starting_pc.shape
+                relative_rotmat_inner, plane_model_inner, plane_idxs = surface_util.get_relative_rotation_from_hot_labels(starting_pc,
+                                                                                                              torch.zeros(num_points),
+                                                                                                              ret_idxs=True)
+
+                rr_arr.append(relative_rotmat_inner)
+                plane_model_arr.append(plane_model_inner)
+
+                estimated_canonical_pc = R.from_matrix(relative_rotmat_inner).apply(starting_pc_original.data.cpu().numpy())
+
+                height_found = np.max(estimated_canonical_pc[:, -1])
+                print(height_found)
+
+                heights_arr.append(height_found)
+
+                while len(plane_idxs) > 50:
+                    starting_pc = torch.as_tensor(np.delete(starting_pc.data.cpu().numpy(), plane_idxs, axis=0), device=starting_pc_device)
+
                     num_points = starting_pc.shape[0]
+                    if num_points < 20:
+                        break
 
-                    rr_arr, plane_model_arr, heights_arr = [], [], []
-
+                    # nB, nO, num_points, _ = starting_pc.shape
                     relative_rotmat_inner, plane_model_inner, plane_idxs = surface_util.get_relative_rotation_from_hot_labels(starting_pc,
                                                                                                                   torch.zeros(num_points),
                                                                                                                   ret_idxs=True)
@@ -148,298 +172,276 @@ def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episod
 
                     height_found = np.max(estimated_canonical_pc[:, -1])
                     print(height_found)
-
                     heights_arr.append(height_found)
 
-                    while len(plane_idxs) > 50:
-                        starting_pc = torch.as_tensor(np.delete(starting_pc.data.cpu().numpy(), plane_idxs, axis=0), device=starting_pc_device)
-
-                        num_points = starting_pc.shape[0]
-                        if num_points < 20:
-                            break
-
-                        # nB, nO, num_points, _ = starting_pc.shape
-                        relative_rotmat_inner, plane_model_inner, plane_idxs = surface_util.get_relative_rotation_from_hot_labels(starting_pc,
-                                                                                                                      torch.zeros(num_points),
-                                                                                                                      ret_idxs=True)
-
-                        rr_arr.append(relative_rotmat_inner)
-                        plane_model_arr.append(plane_model_inner)
-
-                        estimated_canonical_pc = R.from_matrix(relative_rotmat_inner).apply(starting_pc_original.data.cpu().numpy())
-
-                        height_found = np.max(estimated_canonical_pc[:, -1])
-                        print(height_found)
-                        heights_arr.append(height_found)
-
-                        canonical_pc = qrot(R.from_quat(batch['current_quats'][selected_object_id]).inv().as_quat(),
-                                            starting_pc)
-                        # geoms_to_draw = [
-                        #     vis_util.make_point_cloud_o3d(starting_pc,
-                        #                                   color=np.zeros(3))]
-                        #     # vis_util.make_point_cloud_o3d(canonical_pc + np.array([0.,0.,.5]),
-                        #     #                               color=np.zeros(3)),
-                        #     # open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, -.5])]
-                        #
-                        # made_box, box_centroid = gen_surface_box(plane_model_inner, ret_centroid=True)
-                        # geoms_to_draw.append(bandu_util.create_arrow(plane_model_inner[:3], [1., 0., 0.], position=box_centroid))
-                        # geoms_to_draw.append(made_box)
-                        #
-                        # open3d.visualization.draw_geometries(geoms_to_draw)
-
-                    best_id = np.argmax(heights_arr)
-                    relative_rotmat = rr_arr[best_id]
-                    plane_model = plane_model_arr[best_id]
-                elif use_gt_pts:
-                    # use the ground truth thresholded surface points
-                    # relative_rotmat, plane_model = surface_util.get_relative_rotation_from_hot_labels(batch['rotated_pointcloud'][sample_idx][selected_object_id],
-                    #                                                                                   batch['bottom_thresholded_boolean'][selected_object_id].squeeze(-1))
-                    relative_rotmat, plane_model = surface_util.get_relative_rotation_from_hot_labels(batch['rotated_pointcloud'][sample_idx][selected_object_id],
-                                                                                                      batch['bottom_thresholded_boolean'][0, selected_object_id].squeeze(-1))
-                elif "surface_classifier" in models_dict.keys() and selected_object_id > -1:
-
-                    nB, nO, num_points, _ =  batch['rotated_pointcloud'].shape
-                    # nB == 1, nO, 1024, 3 -> nB * nO, num_points -> nB, nO, num_points
-
-                    print("ln216 memory stats")
-                    print(torch.cuda.memory_summary(device=0, abbreviated=False))
-                    print(torch.cuda.memory_summary(device=1, abbreviated=False))
-                    if models_dict['surface_classifier'].label_type == "btb":
-                        if "cvae" in models_dict['surface_classifier'].__class__.__name__.lower():
-                            predicted_surface_binary_logits = models_dict['surface_classifier'].decode_batch(batch).reshape(nB, nO, num_points)
-                        else:
-                            predicted_surface_binary_logits = models_dict['surface_classifier'](batch).reshape(nB, nO, num_points)
-
-                        relative_rotmat, plane_model = surface_util.get_relative_rotation_from_binary_logits(batch['rotated_pointcloud'][sample_idx][selected_object_id],
-                                                                                          predicted_surface_binary_logits[sample_idx][selected_object_id])
-                    else:
-                        predictions = models_dict['surface_classifier'].decode_batch(batch, ret_eps=False, z_samples_per_sample=1)
-                        if models_dict['surface_classifier'].A_vec_to_quat_head:
-                            q = A_vec_to_quat(predictions[sample_idx])
-                            relative_rotmat = R.from_quat(q.data.cpu().numpy()).as_matrix()[0]
-                        else:
-                            relative_rotmat = R.from_quat(predictions[sample_idx].data.cpu().numpy()).as_matrix()[0]
-
-                    print("ln234 memory stats")
-                    print(torch.cuda.memory_summary(device=0, abbreviated=False))
-                    print(torch.cuda.memory_summary(device=1, abbreviated=False))
-                    # batch['rotated_pointcloud'] shape: 1, 1, num_points, 3
-                    # -> num_points', 3
-
-                    # selected_surface_points = batch['rotated_pointcloud'][0][0][(torch.sigmoid(surface_binary_logits) < .5).squeeze(0)]
-                    # surface_pcd = open3d.geometry.PointCloud()
-                    # surface_pcd.points = open3d.utility.Vector3dVector(selected_surface_points.cpu().data.numpy())
-
-                    # open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
-                    #                                                                     color=make_colors(surface_binary_logits.squeeze(0))),
-                    #                                       vis_util.make_point_cloud_o3d(qrot(relquat, batch['rotated_pointcloud'][0][0]),
-                    #                                                                     color=np.array([0.,1.,0.])),
-                    #                                       vis_util.make_point_cloud_o3d(qrot(R.from_quat(batch['current_quats'][0]).inv().as_quat(), batch['rotated_pointcloud'][0][0]),
-                    #                                                                     color=np.array([0.,0.,1.])),
-                    #                                       gen_surface_box(plane_model),
-                    #                                       open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])])
-
-                elif "ipdf" in models_dict.keys() and selected_object_id > -1:
-                    # Apply models.
-                    with torch.no_grad():
-                        feature = models_dict['model'](batch['rotated_pointcloud'][sample_idx][selected_object_id].unsqueeze(0).permute(0, 2, 1))
-                        # Recursion level 4 amounts to ~300k samples.
-                        queries = ipdf_models.generate_queries(
-                            num_queries=4,
-                            mode='grid',
-                            rotate_to=torch.eye(3, device=model_device)[None])
-                        pdf, pmf = models_dict['ipdf'].compute_pdf(feature, queries)
-
-                        # If we have to output a single rotation, this is it.
-                        # TODO: we could run gradient ascent here to improve accuracy.
-                        relative_rotmat = queries[0][pdf.argmax(axis=-1)][0].data.cpu().numpy()
-                else:
-                    raise NotImplementedError
-
-                if vis_o3d or save_o3d:
-                    if use_gt_pts or use_pca_obb:
-                        # colors for the ground truth
-                        # mc1 = make_colors(batch['bottom_thresholded_boolean'][selected_object_id].squeeze(-1),
-                        #                  surface_color=[0., 1., 0.],
-                        #                  background_color=[128 / 255, 0, 128 / 255])
-
-                        # mc2 = make_colors(batch['bottom_thresholded_boolean'][selected_object_id].squeeze(-1))
-
-                        mc1 = make_colors(batch['bottom_thresholded_boolean'][sample_idx, selected_object_id].squeeze(-1),
-                                          background_color=color_util.MURKY_GREEN, surface_color=color_util.YELLOW)
-
-                        mc2 = make_colors(batch['bottom_thresholded_boolean'][sample_idx, selected_object_id].squeeze(-1))
-                    else:
-                        if 'surface_classifier' in models_dict.keys() and models_dict['surface_classifier'].label_type == "btb":
-                            # colors for the predicted contact points
-                            # mc1 = make_colors(torch.sigmoid(surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)),
-                            #                   surface_color=[0., 1., 0.],
-                            #                   background_color=[128 / 255, 0, 128 / 255])
-                            mc2 = visualization_util.make_color_map(torch.sigmoid(predicted_surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)))
-                            mc1 = make_colors(torch.sigmoid(predicted_surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)))
-
-                    if 'surface_classifier' in models_dict.keys() and models_dict['surface_classifier'].label_type == "btb":
-                        if not use_pca_obb:
-                            geoms_to_draw = [
-                                vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][selected_object_id],
-                                                              color=mc1),
-                                # vis_util.make_point_cloud_o3d(canonical_pc + np.array([0.,0.,.5]),
-                                #                               color=mc2),
-                                open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])]
-
-                            box, box_centroid = gen_surface_box(plane_model, ret_centroid=True, color=[0., 0., .5])
-                            geoms_to_draw.append(bandu_util.create_arrow(plane_model[:3], [0., 0., .5],
-                                                                         position=box_centroid,
-                                                                         object_com=np.zeros(3)),
-                                                 )
-                            geoms_to_draw.append(box)
-
-                            # geoms_to_draw.append(vis_util.make_point_cloud_o3d(s['table_pointcloud'], color=[0., 0., 1.]))
-                            if vis_o3d:
-                                open3d.visualization.draw_geometries(geoms_to_draw)
-
-                                # temporary stuff for the presentation
-                                open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][selected_object_id],
-                                                                                                    color=mc1),
-                                                                      open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])])
-                                open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][selected_object_id],
-                                                                      color=[0., 0., 0.]),
-                                                                      open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])])
-                        # open3d.visualization.draw_geometries([
-                        #     vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][selected_object_id],
-                        #                                   color=[0., 0., 0.]),
-                        #     vis_util.make_point_cloud_o3d(canonical_pc + np.array([0.,0.,.5]),
-                        #                                   color=[0., 0., 0.]),
-                        #     open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, -.5])])
-
-                def get_best_normal_best_theta(rel_quat, current_quat):
-                    # target_quat
-                    # target_rot = (R.from_quat(rel_quat) * R.from_quat(batch['current_quats'][selected_object_id]))
-                    target_rot = (R.from_quat(rel_quat) * R.from_quat(current_quat))
-
-                    # load URDF extra config
-                    print("ln303 selected oid")
-                    print(selected_object_id)
-                    print(env.urdf_paths)
-
-                    urdf_path = env.urdf_paths[env.sampled_path_idxs[selected_object_id]]
-                    dir_ = os.path.dirname(urdf_path)
-                    config_path = Path(dir_) / "extra_config"
-                    with open(str(config_path), "r") as fp:
-                        jd = json.load(fp)
-
-                    # rotate normals according to target rot
-                    rotated_normals = []
-
-                    for normal_list in jd['normals']:
-                        normal = np.array(normal_list)
-                        rotated_normals.append(target_rot.apply(normal))
-
-                    # find the normal that is closest to the gravity vector
-                    thetas = []
-                    for i in range(len(rotated_normals)):
-                        theta = np.arccos(np.dot(rotated_normals[i], [0, 0, -1]))
-                        thetas.append(theta)
-
-                    min_idx = np.argmin(thetas)
-
-                    # save that normal
-                    best_normal = rotated_normals[min_idx]
-
-                    # save the distance from that normal to the gravity rot
-                    best_theta = thetas[min_idx]
-                    return best_normal, best_theta
-
-                if use_pca_obb and gen_antiparallel_rotation:
-                    print("ln82 rrm")
-                    print(relative_rotmat)
-                    relquat = R.from_matrix(relative_rotmat).as_quat()
-
-                    best_normal, best_theta = get_best_normal_best_theta(relquat, batch['current_quats'][selected_object_id])
-
-                    relquat2 = R.from_matrix(relative_rotmat2).as_quat()
-
-                    best_normal2, best_theta2 = get_best_normal_best_theta(relquat2, batch['current_quats'][selected_object_id])
-
-                    if best_theta < best_theta2:
-                        action_dict['relative_quat'] = relquat
-                        # keep normals and quats
-                    else:
-                        # best_theta2 < best_theta
-                        best_normal = best_normal2
-                        best_theta = best_theta2
-                        action_dict['relative_quat'] = relquat2
-                else:
-                    print("ln82 rrm")
-                    print(relative_rotmat)
-                    relquat = R.from_matrix(relative_rotmat).as_quat()
-                    best_normal, best_theta = get_best_normal_best_theta(relquat, batch['current_quats'][selected_object_id])
-                    action_dict['relative_quat'] = relquat
-
-                print("ln325 best normal")
-                print(best_normal)
-                print(best_theta)
-
-                s_new, r, d, info = env.step(action_dict, falling_reset=False, debug_rotation_angle=False,
-                                             debug_draw_abb=False)
-
-                print("\n\n\n")
-                if save_o3d:
                     canonical_pc = qrot(R.from_quat(batch['current_quats'][selected_object_id]).inv().as_quat(),
-                                        batch['rotated_pointcloud'][sample_idx][selected_object_id])
-                    dic_it = dict(rotated_pointcloud=batch['rotated_pointcloud'][sample_idx][selected_object_id],
-                                  canonical_pc=canonical_pc,
-                                  btb=batch['bottom_thresholded_boolean'][sample_idx],
-                                  batch=copy.deepcopy(batch),
-                                  relative_rotmat=relative_rotmat,
-                                  best_normal=best_normal,
-                                  best_theta=best_theta
-                                  )
-                    if not use_pca_obb and 'surface_classifier' in models_dict.keys() and models_dict['surface_classifier'].label_type == "btb":
-                        dic_it['mc1'] = mc1
-                        dic_it['mc2'] = mc2
-                        dic_it['plane_model']= plane_model
-                        dic_it['box_centroid']=box_centroid,
-                        dic_it['surface_binary_logits']=predicted_surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)
-                    torch.save(dic_it, ep_dir / f"ep{ep_idx}_{timestep}_o3d.pkl")
+                                        starting_pc)
+                    # geoms_to_draw = [
+                    #     vis_util.make_point_cloud_o3d(starting_pc,
+                    #                                   color=np.zeros(3))]
+                    #     # vis_util.make_point_cloud_o3d(canonical_pc + np.array([0.,0.,.5]),
+                    #     #                               color=np.zeros(3)),
+                    #     # open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, -.5])]
+                    #
+                    # made_box, box_centroid = gen_surface_box(plane_model_inner, ret_centroid=True)
+                    # geoms_to_draw.append(bandu_util.create_arrow(plane_model_inner[:3], [1., 0., 0.], position=box_centroid))
+                    # geoms_to_draw.append(made_box)
+                    #
+                    # open3d.visualization.draw_geometries(geoms_to_draw)
 
-                # save one more time
-                if img_render_dir is not None:
-                    img = env.render(scale_factor=1/2)
-                    pil_img = Image.fromarray(img, 'RGB')
+                best_id = np.argmax(heights_arr)
+                relative_rotmat = rr_arr[best_id]
+                plane_model = plane_model_arr[best_id]
+            elif use_gt_pts:
+                # use the ground truth thresholded surface points
+                # relative_rotmat, plane_model = surface_util.get_relative_rotation_from_hot_labels(batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                #                                                                                   batch['bottom_thresholded_boolean'][selected_object_id].squeeze(-1))
+                relative_rotmat, plane_model = surface_util.get_relative_rotation_from_hot_labels(batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                                                                                                  batch['bottom_thresholded_boolean'][0, selected_object_id].squeeze(-1))
+            elif "surface_classifier" in models_dict.keys() and selected_object_id > -1:
 
-                    pth = ep_dir / f"ep{ep_idx}_{s_new['timestep'][0]}.png"
-                    pil_img.save(pth)
+                nB, nO, num_points, _ =  batch['rotated_pointcloud'].shape
+                # nB == 1, nO, 1024, 3 -> nB * nO, num_points -> nB, nO, num_points
 
-                s = s_new
+                print("ln216 memory stats")
+                print(torch.cuda.memory_summary(device=0, abbreviated=False))
+                # print(torch.cuda.memory_summary(device=1, abbreviated=False))
+                if models_dict['surface_classifier'].label_type == "btb":
+                    if "cvae" in models_dict['surface_classifier'].__class__.__name__.lower():
+                        predicted_surface_binary_logits = models_dict['surface_classifier'].decode_batch(batch).reshape(nB, nO, num_points)
+                    else:
+                        predicted_surface_binary_logits = models_dict['surface_classifier'](batch).reshape(nB, nO, num_points)
 
-                # if pb_loop:
-                #     pb_util.pb_key_loop("n")
+                    relative_rotmat, plane_model = surface_util.get_relative_rotation_from_binary_logits(batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                                                                                      predicted_surface_binary_logits[sample_idx][selected_object_id])
+                else:
+                    predictions = models_dict['surface_classifier'].decode_batch(batch, ret_eps=False, z_samples_per_sample=1)
+                    if models_dict['surface_classifier'].A_vec_to_quat_head:
+                        q = A_vec_to_quat(predictions[sample_idx])
+                        relative_rotmat = R.from_quat(q.data.cpu().numpy()).as_matrix()[0]
+                    else:
+                        relative_rotmat = R.from_quat(predictions[sample_idx].data.cpu().numpy()).as_matrix()[0]
 
-                if img_render_dir is not None and "info" in vars():
-                    # ep_dir = Path(img_render_dir) / "_".join(s['object_names']) / str(ep_idx)
-                    ep_dir = Path(img_render_dir) / "_".join(s['object_names'])
+                print("ln234 memory stats")
+                print(torch.cuda.memory_summary(device=0, abbreviated=False))
+                # print(torch.cuda.memory_summary(device=1, abbreviated=False))
+                # batch['rotated_pointcloud'] shape: 1, 1, num_points, 3
+                # -> num_points', 3
 
-                    pth = ep_dir / f"ep{ep_idx}_{timestep}_info.json"
-                    with open(pth, "w") as fp:
-                        new_info = dict()
+                # selected_surface_points = batch['rotated_pointcloud'][0][0][(torch.sigmoid(surface_binary_logits) < .5).squeeze(0)]
+                # surface_pcd = open3d.geometry.PointCloud()
+                # surface_pcd.points = open3d.utility.Vector3dVector(selected_surface_points.cpu().data.numpy())
 
-                        for k,v in info.items():
-                            if isinstance(v, np.ndarray):
-                                new_info[k] = v.tolist()
-                            else:
-                                new_info[k] = v
+                # open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
+                #                                                                     color=make_colors(surface_binary_logits.squeeze(0))),
+                #                                       vis_util.make_point_cloud_o3d(qrot(relquat, batch['rotated_pointcloud'][0][0]),
+                #                                                                     color=np.array([0.,1.,0.])),
+                #                                       vis_util.make_point_cloud_o3d(qrot(R.from_quat(batch['current_quats'][0]).inv().as_quat(), batch['rotated_pointcloud'][0][0]),
+                #                                                                     color=np.array([0.,0.,1.])),
+                #                                       gen_surface_box(plane_model),
+                #                                       open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])])
 
-                        new_info['best_normal'] = best_normal.tolist()
-                        new_info['best_theta'] = best_theta
-                        json.dump(new_info, fp)
+            elif "ipdf" in models_dict.keys() and selected_object_id > -1:
+                # Apply models.
+                with torch.no_grad():
+                    feature = models_dict['model'](batch['rotated_pointcloud'][sample_idx][selected_object_id].unsqueeze(0).permute(0, 2, 1))
+                    # Recursion level 4 amounts to ~300k samples.
+                    queries = ipdf_models.generate_queries(
+                        num_queries=4,
+                        mode='grid',
+                        rotate_to=torch.eye(3, device=model_device)[None])
+                    pdf, pmf = models_dict['ipdf'].compute_pdf(feature, queries)
 
-                print("\n\n")
-                print(f"Final num stacked: {float(info['num_stacked'])}")
-                stacked_scores.append(float(info['num_stacked']))
-        except:
-            # keep episodes coming
-            continue
+                    # If we have to output a single rotation, this is it.
+                    # TODO: we could run gradient ascent here to improve accuracy.
+                    relative_rotmat = queries[0][pdf.argmax(axis=-1)][0].data.cpu().numpy()
+            else:
+                raise NotImplementedError
+
+            if vis_o3d or save_o3d:
+                if use_gt_pts or use_pca_obb:
+                    # colors for the ground truth
+                    # mc1 = make_colors(batch['bottom_thresholded_boolean'][selected_object_id].squeeze(-1),
+                    #                  surface_color=[0., 1., 0.],
+                    #                  background_color=[128 / 255, 0, 128 / 255])
+
+                    # mc2 = make_colors(batch['bottom_thresholded_boolean'][selected_object_id].squeeze(-1))
+
+                    mc1 = make_colors(batch['bottom_thresholded_boolean'][sample_idx, selected_object_id].squeeze(-1),
+                                      background_color=color_util.MURKY_GREEN, surface_color=color_util.YELLOW)
+
+                    mc2 = make_colors(batch['bottom_thresholded_boolean'][sample_idx, selected_object_id].squeeze(-1))
+                else:
+                    if 'surface_classifier' in models_dict.keys() and models_dict['surface_classifier'].label_type == "btb":
+                        # colors for the predicted contact points
+                        # mc1 = make_colors(torch.sigmoid(surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)),
+                        #                   surface_color=[0., 1., 0.],
+                        #                   background_color=[128 / 255, 0, 128 / 255])
+                        mc2 = visualization_util.make_color_map(torch.sigmoid(predicted_surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)))
+                        mc1 = make_colors(torch.sigmoid(predicted_surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)))
+
+                if 'surface_classifier' in models_dict.keys() and models_dict['surface_classifier'].label_type == "btb":
+                    if not use_pca_obb:
+                        geoms_to_draw = [
+                            vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                                                          color=mc1),
+                            # vis_util.make_point_cloud_o3d(canonical_pc + np.array([0.,0.,.5]),
+                            #                               color=mc2),
+                            open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])]
+
+                        box, box_centroid = gen_surface_box(plane_model, ret_centroid=True, color=[0., 0., .5])
+                        geoms_to_draw.append(bandu_util.create_arrow(plane_model[:3], [0., 0., .5],
+                                                                     position=box_centroid,
+                                                                     object_com=np.zeros(3)),
+                                             )
+                        geoms_to_draw.append(box)
+
+                        # geoms_to_draw.append(vis_util.make_point_cloud_o3d(s['table_pointcloud'], color=[0., 0., 1.]))
+                        if vis_o3d:
+                            open3d.visualization.draw_geometries(geoms_to_draw)
+
+                            # temporary stuff for the presentation
+                            open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                                                                                                color=mc1),
+                                                                  open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])])
+                            open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                                                                  color=[0., 0., 0.]),
+                                                                  open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])])
+                    # open3d.visualization.draw_geometries([
+                    #     vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                    #                                   color=[0., 0., 0.]),
+                    #     vis_util.make_point_cloud_o3d(canonical_pc + np.array([0.,0.,.5]),
+                    #                                   color=[0., 0., 0.]),
+                    #     open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, -.5])])
+
+            def get_best_normal_best_theta(rel_quat, current_quat):
+                # target_quat
+                # target_rot = (R.from_quat(rel_quat) * R.from_quat(batch['current_quats'][selected_object_id]))
+                target_rot = (R.from_quat(rel_quat) * R.from_quat(current_quat))
+
+                # load URDF extra config
+                print("ln303 selected oid")
+                print(selected_object_id)
+                print(env.urdf_paths)
+
+                urdf_path = env.urdf_paths[env.sampled_path_idxs[selected_object_id]]
+                dir_ = os.path.dirname(urdf_path)
+                config_path = Path(dir_) / "extra_config"
+                with open(str(config_path), "r") as fp:
+                    jd = json.load(fp)
+
+                # rotate normals according to target rot
+                rotated_normals = []
+
+                for normal_list in jd['normals']:
+                    normal = np.array(normal_list)
+                    rotated_normals.append(target_rot.apply(normal))
+
+                # find the normal that is closest to the gravity vector
+                thetas = []
+                for i in range(len(rotated_normals)):
+                    theta = np.arccos(np.dot(rotated_normals[i], [0, 0, -1]))
+                    thetas.append(theta)
+
+                min_idx = np.argmin(thetas)
+
+                # save that normal
+                best_normal = rotated_normals[min_idx]
+
+                # save the distance from that normal to the gravity rot
+                best_theta = thetas[min_idx]
+                return best_normal, best_theta
+
+            if use_pca_obb and gen_antiparallel_rotation:
+                print("ln82 rrm")
+                print(relative_rotmat)
+                relquat = R.from_matrix(relative_rotmat).as_quat()
+
+                best_normal, best_theta = get_best_normal_best_theta(relquat, batch['current_quats'][selected_object_id])
+
+                relquat2 = R.from_matrix(relative_rotmat2).as_quat()
+
+                best_normal2, best_theta2 = get_best_normal_best_theta(relquat2, batch['current_quats'][selected_object_id])
+
+                if best_theta < best_theta2:
+                    action_dict['relative_quat'] = relquat
+                    # keep normals and quats
+                else:
+                    # best_theta2 < best_theta
+                    best_normal = best_normal2
+                    best_theta = best_theta2
+                    action_dict['relative_quat'] = relquat2
+            else:
+                print("ln82 rrm")
+                print(relative_rotmat)
+                relquat = R.from_matrix(relative_rotmat).as_quat()
+                best_normal, best_theta = get_best_normal_best_theta(relquat, batch['current_quats'][selected_object_id])
+                action_dict['relative_quat'] = relquat
+
+            print("ln325 best normal")
+            print(best_normal)
+            print(best_theta)
+
+            s_new, r, d, info = env.step(action_dict, falling_reset=False, debug_rotation_angle=False,
+                                         debug_draw_abb=False)
+
+            print("\n\n\n")
+            if save_o3d:
+                canonical_pc = qrot(R.from_quat(batch['current_quats'][selected_object_id]).inv().as_quat(),
+                                    batch['rotated_pointcloud'][sample_idx][selected_object_id])
+                dic_it = dict(rotated_pointcloud=batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                              canonical_pc=canonical_pc,
+                              btb=batch['bottom_thresholded_boolean'][sample_idx],
+                              batch=copy.deepcopy(batch),
+                              relative_rotmat=relative_rotmat,
+                              best_normal=best_normal,
+                              best_theta=best_theta
+                              )
+                if not use_pca_obb and 'surface_classifier' in models_dict.keys() and models_dict['surface_classifier'].label_type == "btb":
+                    dic_it['mc1'] = mc1
+                    dic_it['mc2'] = mc2
+                    dic_it['plane_model']= plane_model
+                    dic_it['box_centroid']=box_centroid,
+                    dic_it['surface_binary_logits']=predicted_surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)
+                torch.save(dic_it, ep_dir / f"ep{ep_idx}_{timestep}_o3d.pkl")
+
+            # save one more time
+            if img_render_dir is not None:
+                img = env.render(scale_factor=1/2)
+                pil_img = Image.fromarray(img, 'RGB')
+
+                pth = ep_dir / f"ep{ep_idx}_{s_new['timestep'][0]}.png"
+                pil_img.save(pth)
+
+            s = s_new
+
+            # if pb_loop:
+            #     pb_util.pb_key_loop("n")
+
+            if img_render_dir is not None and "info" in vars():
+                # ep_dir = Path(img_render_dir) / "_".join(s['object_names']) / str(ep_idx)
+                ep_dir = Path(img_render_dir) / "_".join(s['object_names'])
+
+                pth = ep_dir / f"ep{ep_idx}_{timestep}_info.json"
+                with open(pth, "w") as fp:
+                    new_info = dict()
+
+                    for k,v in info.items():
+                        if isinstance(v, np.ndarray):
+                            new_info[k] = v.tolist()
+                        else:
+                            new_info[k] = v
+
+                    new_info['best_normal'] = best_normal.tolist()
+                    new_info['best_theta'] = best_theta
+                    json.dump(new_info, fp)
+
+            print("\n\n")
+            print(f"Final num stacked: {float(info['num_stacked'])}")
+            stacked_scores.append(float(info['num_stacked']))
+        # except:
+        #     # keep episodes coming
+        #     continue
 
     for name, model in models_dict.items():
         model.train()
