@@ -37,6 +37,7 @@ import open3d
 from torch.utils.data import DataLoader
 from data_generation.dataset import PointcloudDataset
 import json
+import numpy as np
 
 torch.set_printoptions(edgeitems=12)
 config = misc_util.load_hyperconfig_from_filepath(args.hyper_config)
@@ -91,6 +92,12 @@ for sample_idx in range(args.batch_size):
             print("eps")
             print(eps[sample_idx])
 
+        box, box_centroid = surface_util.gen_surface_box(plane_model, ret_centroid=True, color=[0, 0, .5])
+        arrow = vis_util.create_arrow(plane_model[:3], [0., 0., .5],
+                                                   position=box_centroid,
+                                                   # object_com=sample_pkl['position'])
+                                                   object_com=np.zeros(3))  # because the object has been centered
+
         open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][0],
                                                                             color=make_colors(torch.sigmoid(predictions[sample_idx][z_idx]))),
                                               vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][0] + torch.tensor([0, 0, .5]),
@@ -100,5 +107,6 @@ for sample_idx in range(args.batch_size):
                                               vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][0] + torch.tensor([0, 0, 1]),
                                                                             color=make_colors(batch['bottom_thresholded_boolean'][sample_idx],
                                                                                               background_color=color_util.MURKY_GREEN, surface_color=color_util.YELLOW)),
-                                              # box,
+                                              box,
+                                              arrow,
                                               open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])])

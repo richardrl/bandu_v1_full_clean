@@ -1,24 +1,26 @@
 import numpy
 import torch
-from bandu.utils import pb_util, vis_util, bandu_util
-from supervised_training.utils import surface_util, pointcloud_util, visualization_util
-from spinup.policies.handcrafted import handcrafted_policy1
+# from bandu.utils import pb_util, vis_util, bandu_util
+# from utils import surface_util, pointcloud_util, visualization_util
+# from spinup.policies.handcrafted import handcrafted_policy1
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 import open3d
-from bandu.imports.QuaterNet.quaternion import qrot
+from utils.quaternion import qrot
 from deco import *
-from supervised_training.utils.visualization_util import make_colors
-from supervised_training.utils.surface_util import gen_surface_box
+from utils.vis_util import make_colors
+from utils.surface_util import gen_surface_box
 import pybullet as p
 import time
 from PIL import Image
 from pathlib import Path
 import json
 import copy
-from bandu.imports.bingham_rotation_learning.qcqp_layers import A_vec_to_quat
+# from bandu.imports.bingham_rotation_learning.qcqp_layers import A_vec_to_quat
 import os
-from imports.ipdf import models as ipdf_models
+from utils import color_util, camera_util
+# from imports.ipdf import models as ipdf_models
+
 
 def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episodes=100, display_loss=True,
                        stats_dic=None, urdf_ids_per_episode=None, ret_scores=False, vis_o3d=True, save_o3d=True,
@@ -60,6 +62,7 @@ def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episod
 
     for ep_idx in range(max_episodes):
         # env.current_urdf_tuple_idx = 19
+
         s = env.reset(sampled_path_idxs=urdf_ids_per_episode[ep_idx] if urdf_ids_per_episode is not None else None)
         print("\n\n RESET")
         if pb_loop:
@@ -261,7 +264,6 @@ def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episod
                         #                  background_color=[128 / 255, 0, 128 / 255])
 
                         # mc2 = make_colors(batch['bottom_thresholded_boolean'][selected_object_id].squeeze(-1))
-                        from bandu.utils import color_util
 
                         mc1 = make_colors(batch['bottom_thresholded_boolean'][sample_idx, selected_object_id].squeeze(-1),
                                           background_color=color_util.MURKY_GREEN, surface_color=color_util.YELLOW)
@@ -584,7 +586,7 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
         return get_bti(canonical, threshold_frac, 0, min_z=min_z,
                        max_z=max_z)
 
-from bandu.utils import camera_util
+
 def get_batch_from_state(s, model_device, num_points, stats_dic=None, threshold_frac=1/50, linear_search=True,
                          cameras=None):
     """

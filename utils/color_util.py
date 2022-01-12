@@ -52,6 +52,25 @@ def genhtml(x):
 
 gethtmlcolors = lambda: map(genhtml, getrgbs())
 
+# def get_colors(n):
+#     return list(itertools.islice(gethtmlcolors(), n))
+
+def get_colors(n):
+    base_colors = np.ones((30, 3))
+
+    base_colors[15] = (230, 25, 75)
+    base_colors[14] = (70, 240, 240)
+    base_colors[7] = (60, 180, 75)
+    base_colors[9] = (170, 110, 40)
+    base_colors[16] = (60, 180, 75)
+    # base_colors[5] = (0, 0, 128)
+    base_colors[5] = (170, 110, 40)
+    base_colors[4] = (128, 0, 0)
+    base_colors[0] = (240, 50, 230)
+    base_colors[11] = (0, 128, 128)
+    base_colors[6] = (255, 225, 25)
+    base_colors[12] = (245, 130, 48)
+    base_colors[19] = (220, 190, 255)
 
 def gen_colors(n):
     """

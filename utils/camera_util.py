@@ -45,6 +45,8 @@ def get_joint_pointcloud(airobot_cameras,
                          uv_one_in_cam=None):
     """
 
+    If this function fails due to incorrect outputs, check that you have the right return_ims or return_uv_cam_only falgs.
+
     :param airobot_cameras:
     :param obj_id:
     :param filter_table_height:

@@ -53,6 +53,9 @@ RUN set -eux; \
 
 RUN apt-get update && apt-get install -y tmux
 
+RUN pip3 install gym
+RUN pip3 install urdfpy
+
 # setup entrypoint
 COPY ./entrypoint.sh .
 
