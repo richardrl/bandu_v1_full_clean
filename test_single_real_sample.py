@@ -52,7 +52,8 @@ obb = obb.create_from_points(pcd.points)
 # center at COM
 pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - obb.get_center())
 
-batch['rotated_pointcloud'] = torch.from_numpy(np.array(pcd.voxel_down_sample(voxel_size=0.004).points)).unsqueeze(0).unsqueeze(0)
+downsampled_pcd = pcd.voxel_down_sample(voxel_size=0.004)
+batch['rotated_pointcloud'] = torch.from_numpy(np.array(downsampled_pcd.points)).unsqueeze(0).unsqueeze(0)
 assert batch['rotated_pointcloud'].shape[2] > 1024 and batch['rotated_pointcloud'].shape[2] < 2048, batch['rotated_pointcloud'].shape
 
 # center pointcloud
@@ -87,9 +88,19 @@ geoms_to_draw.append(vis_util.create_arrow(plane_model[:3], [0., 0., .5],
                      )
 geoms_to_draw.append(box)
 
+# original_rgb_with_red_contact_points =
+
+surface_points_binary_mask = torch.round(torch.sigmoid(predictions[0][0]))
+
+contact_points_binary_mask = 1 -surface_points_binary_mask
+
+original_rgb_with_red_contact_points = (torch.from_numpy(np.array(downsampled_pcd.colors)).to(surface_points_binary_mask.device) * surface_points_binary_mask) + \
+                                       contact_points_binary_mask * torch.Tensor([1, 0, 0]).unsqueeze(0).expand(surface_points_binary_mask.shape[0], -1).to(contact_points_binary_mask.device)
+
 geoms_to_draw.append(vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
-                                                                    color=vis_util.make_colors(
-                                                                        torch.sigmoid(predictions[0][0]))))
+                                                                    color=original_rgb_with_red_contact_points.data.cpu().numpy() ))
+                                                                    # color=vis_util.make_colors(
+                                                                    #     torch.sigmoid(predictions[0][0])) ))
 
 geoms_to_draw.append(open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0]))
 open3d.visualization.draw_geometries(geoms_to_draw)

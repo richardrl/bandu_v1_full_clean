@@ -82,6 +82,7 @@ python3 5_visualize_sample_pkl.py ~/bandu_v1_full_clean/out/canonical_pointcloud
 
 ## Real samples
 
+spring-plasma-2020 (paper model)
 ```
 python3 test_single_real_sample.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py out/spring-plasma-2020_checkpoint240 --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json /data/pulkitag/models/rli14/realsense_docker/out/samples/01-09-2022_00:36:11_Cross.torch
 
@@ -93,6 +94,7 @@ python3 visualize_simulated_classified_surface_points.py configs/models/8-19-21-
 
 python3 visualize_simulated_classified_surface_points.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py wandb/run-20220110_003726-cbdk34il/files/vocal-fire-24_checkpoint416 out/canonical_pointclouds/jan8_val/fps_randomizenoiseTrue_numfps10_samples  --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json
 
+# spring-plasma-2020 (paper model)
 python3 visualize_simulated_classified_surface_points.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py out/spring-plasma-2020_checkpoint240 out/canonical_pointclouds/jan8_test/fps_randomizenoiseTrue_numfps2_samples  --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json
 ```
 
@@ -104,6 +106,7 @@ TODO: get it working without block base
 python3 environment_evaluation/1_visualize_trained_eval_in_environment_rollout.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/envs/bandu_train_cameraon_verticalurdfs_sequential_cmvscvaecm.py --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json --results_dir=out/env_eval/  --sc_checkpoint=out/spring-plasma-2020_checkpoint240 --block_base
 ```
 
+vocal-fire-24 (new codebase model)
 Change the results_dir, device ID and seed when parallelizing this evaluation over multiple GPUs
 ```
 python3 environment_evaluation/1_visualize_trained_eval_in_environment_rollout.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/envs/bandu_train_cameraon_verticalurdfs_sequential_cmvscvaecm.py --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json --results_dir=out/vocal-fire-24/env_eval_visiongpu51_gpu6/  --sc_checkpoint=wandb/run-20220110_003726-cbdk34il/files/vocal-fire-24_checkpoint600 --block_base --device_id=6 --seed=516
@@ -116,7 +119,15 @@ cd environment_evaluation
 
 python3 2_calculate_success_rate_2block.py ../parts/urdfs/main/engmikedset/ ../out/ 50
 
-python3 
+python3 2_calculate_success_rate_2block.py ../parts/urdfs/main/engmikedset/ ../out/vocal-fire-24/ 50
+
+```
+
+Fill out the arguments in make latex table, and run:
+
+```
+python3 make_latex_table.py
+
 ```
 # Docker 
 To write to files in the mounted volume, make an "out" folder with permissions 777.
