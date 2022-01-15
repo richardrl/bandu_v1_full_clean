@@ -20,7 +20,7 @@ import time
 import itertools
 import numpy as np
 
-@concurrent
+# @concurrent
 def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, global_scaling, pb_loop=False, simulate=True,
                                        compute_oriented_normals=False, o3d_viz=False, data_dir=None,
                                        object_name=None):
@@ -72,12 +72,21 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
 
     current_p, current_q = p.getBasePositionAndOrientation(current_oid)
 
-    pointcloud, depths, uv_one_in_cam = camera_util.get_joint_pointcloud(cameras,
+    # pointcloud, depths, uv_one_in_cam = camera_util.get_joint_pointcloud(cameras,
+    #                                               obj_id=current_oid,
+    #                                               filter_table_height=False,
+    #                                             return_uv_cam_only=True)
+
+    out_dict = camera_util.get_joint_pointcloud(cameras,
                                                   obj_id=current_oid,
                                                   filter_table_height=False,
                                                 return_uv_cam_only=True)
-    if not uv_one_in_cam:
-        return dict()
+    pointcloud, depths, uv_one_in_cam = out_dict['aggregate_pointcloud'], out_dict['depth'], out_dict['uv_one_in_cam']
+
+    # todo why did we have this
+    # if not uv_one_in_cam:
+    #     return dict()
+
     active_camera_ids = []
 
     # depths[0].shape: 3, 48885
@@ -98,7 +107,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
     start = time.time()
     print("ln76 noise generation elapsed time")
 
-    noisy_pc = camera_util.get_joint_pointcloud([cameras[id_] for id_ in active_camera_ids],
+    out_dict = camera_util.get_joint_pointcloud([cameras[id_] for id_ in active_camera_ids],
                                                                              obj_id=current_oid,
                                                                              filter_table_height=False,
                                                                              return_ims=False,
@@ -107,6 +116,9 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
                                                                             uv_one_in_cam=uv_one_in_cam
                                                                              # seg_ims=new_seg_ims
                                                                              )
+
+    noisy_pc = out_dict['aggregate_pointcloud']
+
     end = time.time()
     print(end - start)
 
@@ -146,7 +158,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
 
 
 
-@synchronized
+# @synchronized
 def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict, urdf_dir, prefix, num_samples, urdfs, pointcloud_output_dir,
                                           height_offset=.2,
                                           global_scaling=1.5,

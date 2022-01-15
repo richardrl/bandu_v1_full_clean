@@ -83,7 +83,9 @@ def get_joint_pointcloud(airobot_cameras,
                for cam_id, cam in enumerate(airobot_cameras)]
 
     # Each point cloud is num_points X 3
-    pointclouds = [output[0] for output in outputs]
+    pointclouds = [output['pcd_pts'] for output in outputs]
+
+    camera_idx_labels = [np.ones_like(output['pcd_pts'])*output_idx for output_idx, output in enumerate(outputs)]
 
     if augment_extrinsics:
         # apply random transform about the object COM
@@ -100,25 +102,31 @@ def get_joint_pointcloud(airobot_cameras,
 
         pointclouds = pointclouds_tmp
 
-    if return_uv_cam_only:
-        depth = [output[-2] for output in outputs]
-        uv_one_in_cam = [output[-1] for output in outputs]
-
-        return np.concatenate(pointclouds, axis=0), depth, uv_one_in_cam
-
-    if return_ims:
-        rgb_ims = [output[-3] for output in outputs]
-        depth = [output[-2] for output in outputs]
-        seg_ims = [output[-1] for output in outputs]
-        return np.concatenate(pointclouds, axis=0), rgb_ims, depth, seg_ims
-
-    if uniform_sample_max is not None:
-        try:
-            return pointcloud_util.uniform_downsample(uniform_sample_max, np.concatenate(pointclouds, axis=0))
-        except:
-            return np.concatenate(pointclouds, axis=0)
-    else:
-        return np.concatenate(pointclouds, axis=0)
+    return dict(
+        aggregate_pointcloud=np.concatenate(pointclouds, axis=0),
+        camera_idx_labels=camera_idx_labels,
+        depth=[output['depth'] for output in outputs],
+        uv_one_in_cam=[output['uv_one_in_cam'] for output in outputs]
+    )
+    # if return_uv_cam_only:
+    #     depth = [output[-2] for output in outputs]
+    #     uv_one_in_cam = [output[-1] for output in outputs]
+    #
+    #     return np.concatenate(pointclouds, axis=0), depth, uv_one_in_cam
+    #
+    # if return_ims:
+    #     rgb_ims = [output[-3] for output in outputs]
+    #     depth = [output[-2] for output in outputs]
+    #     seg_ims = [output[-1] for output in outputs]
+    #     return np.concatenate(pointclouds, axis=0), rgb_ims, depth, seg_ims
+    #
+    # if uniform_sample_max is not None:
+    #     try:
+    #         return pointcloud_util.uniform_downsample(uniform_sample_max, np.concatenate(pointclouds, axis=0))
+    #     except:
+    #         return np.concatenate(pointclouds, axis=0)
+    # else:
+    #     return np.concatenate(pointclouds, axis=0)
 
 
 def save_image(

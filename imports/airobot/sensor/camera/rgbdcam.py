@@ -334,13 +334,27 @@ class RGBDCamera(Camera):
             # if filter_depth:
             #     assert np.all(pcd_pts[:, 2] > depth_min - .01), (pcd_pts[pcd_pts[:, 2] <= depth_min - .01], obj_id)
 
-            if return_uv_cam_only:
-                """
-                depth: 1D vector which is the number of points segmented, or max_u * max_v
-                """
-                return pcd_pts, pcd_rgb, depth, uv_one_in_cam.copy()
-            elif return_ims:
-                assert len(seg_im.shape) == 2
-                return pcd_pts, rgb_im, depth_im, seg_im
-            else:
-                return pcd_pts, pcd_rgb
+
+            ret = dict(pcd_pts=pcd_pts,
+                        pcd_rgb=pcd_rgb,
+                        depth=depth,
+                        uv_one_in_cam=uv_one_in_cam.copy())
+
+            if uv_one_in_cam is None:
+                ret.update(
+                    rgb_im=rgb_im,
+                    depth_im=depth_im,
+                    seg_im=seg_im,
+                )
+
+            return ret
+            # if return_uv_cam_only:
+            #     """
+            #     depth: 1D vector which is the number of points segmented, or max_u * max_v
+            #     """
+            #     return pcd_pts, pcd_rgb, depth, uv_one_in_cam.copy()
+            # elif return_ims:
+            #     assert len(seg_im.shape) == 2
+            #     return pcd_pts, rgb_im, depth_im, seg_im
+            # else:
+            #     return pcd_pts, pcd_rgb

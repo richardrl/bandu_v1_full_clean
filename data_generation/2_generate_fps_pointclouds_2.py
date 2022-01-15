@@ -72,11 +72,17 @@ def uvd_to_sample_on_disk(depths, uv_one_in_cam, row, fps_idx, dic, original_pc)
     # center at COM
     original_pc = original_pc - dic['position']
 
-    # uniform sample before FPS
-    original_pc = original_pc[np.random.choice(original_pc.shape[0], 10000, replace=False)]
+    # record camera index for each point
+    # downsample according to XYZ, while recording indices
+    # use indices to get the camera index
+    # now, we can get the partial depth values and the associated camera label
 
-    fps_pc = pointcloud_util.get_farthest_point_sampled_pointcloud(original_pc,
-                                                   2048)
+
+    # uniform sample before FPS
+    # original_pc = original_pc[np.random.choice(original_pc.shape[0], 10000, replace=False)]
+    #
+    # fps_pc = pointcloud_util.get_farthest_point_sampled_pointcloud(original_pc,
+    #                                                2048)
 
     new_dic = dic.copy()
 
