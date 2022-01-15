@@ -53,10 +53,6 @@ RUN set -eux; \
 
 RUN apt-get update && apt-get install -y tmux
 
-RUN pip3 install gym
-RUN pip3 install urdfpy
-RUN pip3 install seaborn
-
 # setup entrypoint
 COPY ./entrypoint.sh .
 
@@ -67,6 +63,11 @@ RUN groupadd -r -g 999 docker && useradd -r -g docker -u 999 docker
 RUN chown docker:docker /home
 RUN mkdir /home/docker
 RUN chown docker:docker /home/docker
+
+RUN pip3 install gym
+RUN pip3 install urdfpy
+RUN pip3 install seaborn
+RUN pip3 install trimesh
 
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["bash"]

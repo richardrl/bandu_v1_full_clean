@@ -52,6 +52,9 @@ obb = obb.create_from_points(pcd.points)
 # center at COM
 pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - obb.get_center())
 
+# visualize pointcloud
+open3d.visualization.draw_geometries([pcd])
+
 downsampled_pcd = pcd.voxel_down_sample(voxel_size=0.004)
 batch['rotated_pointcloud'] = torch.from_numpy(np.array(downsampled_pcd.points)).unsqueeze(0).unsqueeze(0)
 assert batch['rotated_pointcloud'].shape[2] > 1024 and batch['rotated_pointcloud'].shape[2] < 2048, batch['rotated_pointcloud'].shape

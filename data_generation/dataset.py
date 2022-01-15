@@ -231,6 +231,8 @@ class PointcloudDataset(Dataset):
         fp = df_row['file_path']
         main_dict = torch.load(fp)
 
+        import pdb
+        pdb.set_trace()
 
         # fps_pc = get_farthest_point_sampled_pointcloud(main_dict['rotated_pointcloud'],
         #                                                                         2048)

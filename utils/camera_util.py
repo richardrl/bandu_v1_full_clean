@@ -42,7 +42,9 @@ def get_joint_pointcloud(airobot_cameras,
                          depth=None,
                          # seg_ims=None,
                          ignore_obj_id=None,
-                         uv_one_in_cam=None):
+                         uv_one_in_cam=None,
+                         augment_extrinsics=False,
+                         object_com = None):
     """
 
     If this function fails due to incorrect outputs, check that you have the right return_ims or return_uv_cam_only falgs.
@@ -82,6 +84,21 @@ def get_joint_pointcloud(airobot_cameras,
 
     # Each point cloud is num_points X 3
     pointclouds = [output[0] for output in outputs]
+
+    if augment_extrinsics:
+        # apply random transform about the object COM
+        # should be small rotation, larger rotation
+        pointclouds_tmp = []
+
+        for partial_pc in pointclouds:
+            centered_partial_pc = partial_pc - object_com
+
+            # randomize translation
+            centered_partial_pc += (np.random.uniform(3) - .5) * np.array([.04, .04, .005])
+
+            pointclouds_tmp.append(centered_partial_pc + object_com)
+
+        pointclouds = pointclouds_tmp
 
     if return_uv_cam_only:
         depth = [output[-2] for output in outputs]

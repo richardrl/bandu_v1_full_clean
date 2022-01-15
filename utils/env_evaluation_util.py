@@ -18,7 +18,7 @@ import json
 import copy
 # from bandu.imports.bingham_rotation_learning.qcqp_layers import A_vec_to_quat
 import os
-from utils import color_util, camera_util, pointcloud_util, surface_util, pb_util
+from utils import color_util, camera_util, pointcloud_util, surface_util, pb_util, vis_util
 # from imports.ipdf import models as ipdf_models
 from policies.handcrafted import handcrafted_policy1
 
@@ -26,7 +26,8 @@ from policies.handcrafted import handcrafted_policy1
 def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episodes=100, display_loss=True,
                        stats_dic=None, urdf_ids_per_episode=None, ret_scores=False, vis_o3d=True, save_o3d=True,
                        use_gt_pts=False, use_pca_obb=False, img_render_dir=None, fps_num_points=2048, block_base=True,
-                       linear_search=True, use_ransac_full_pc=False, gen_antiparallel_rotation=False):
+                       linear_search=True, use_ransac_full_pc=False, gen_antiparallel_rotation=False,
+                       augment_extrinsics=False):
 
     """
 
@@ -84,7 +85,8 @@ def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episod
             # now run policy and do physics simulation
             # try:
             batch = get_batch_from_state(s, model_device, fps_num_points, stats_dic=stats_dic,
-                                         linear_search=linear_search, cameras=cameras)
+                                         linear_search=linear_search, cameras=cameras,
+                                         augment_extrinsics=augment_extrinsics)
             # except Exception as e:
             #     print("ln83 e")
             #     print(e)
@@ -184,7 +186,7 @@ def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episod
                     #     # open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, -.5])]
                     #
                     # made_box, box_centroid = gen_surface_box(plane_model_inner, ret_centroid=True)
-                    # geoms_to_draw.append(bandu_util.create_arrow(plane_model_inner[:3], [1., 0., 0.], position=box_centroid))
+                    # geoms_to_draw.append(vis_util.create_arrow(plane_model_inner[:3], [1., 0., 0.], position=box_centroid))
                     # geoms_to_draw.append(made_box)
                     #
                     # open3d.visualization.draw_geometries(geoms_to_draw)
@@ -212,6 +214,8 @@ def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episod
                     else:
                         predicted_surface_binary_logits = models_dict['surface_classifier'](batch).reshape(nB, nO, num_points)
 
+                    open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][sample_idx][selected_object_id],
+                                                                                        color=[0, 0, 0])])
                     relative_rotmat, plane_model = surface_util.get_relative_rotation_from_binary_logits(batch['rotated_pointcloud'][sample_idx][selected_object_id],
                                                                                       predicted_surface_binary_logits[sample_idx][selected_object_id])
                 else:
@@ -277,7 +281,7 @@ def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episod
                         # mc1 = make_colors(torch.sigmoid(surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)),
                         #                   surface_color=[0., 1., 0.],
                         #                   background_color=[128 / 255, 0, 128 / 255])
-                        mc2 = visualization_util.make_color_map(torch.sigmoid(predicted_surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)))
+                        mc2 = vis_util.make_color_map(torch.sigmoid(predicted_surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)))
                         mc1 = make_colors(torch.sigmoid(predicted_surface_binary_logits[sample_idx][selected_object_id].squeeze(-1)))
 
                 if 'surface_classifier' in models_dict.keys() and models_dict['surface_classifier'].label_type == "btb":
@@ -290,7 +294,7 @@ def evaluate_using_env(env, models_dict, model_device, pb_loop=False, max_episod
                             open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])]
 
                         box, box_centroid = gen_surface_box(plane_model, ret_centroid=True, color=[0., 0., .5])
-                        geoms_to_draw.append(bandu_util.create_arrow(plane_model[:3], [0., 0., .5],
+                        geoms_to_draw.append(vis_util.create_arrow(plane_model[:3], [0., 0., .5],
                                                                      position=box_centroid,
                                                                      object_com=np.zeros(3)),
                                              )
@@ -590,7 +594,7 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
 
 
 def get_batch_from_state(s, model_device, num_points, stats_dic=None, threshold_frac=1/50, linear_search=True,
-                         cameras=None):
+                         cameras=None, augment_noise=True, augment_extrinsics=False):
     """
     Gets batch from a single state from the environment
     :param s:
@@ -664,7 +668,9 @@ def get_batch_from_state(s, model_device, num_points, stats_dic=None, threshold_
                                                        return_ims=False,
                                                        # rgb_ims=new_rgb_ims,
                                                        depth=new_depths,
-                                                       uv_one_in_cam=new_uv_one_in_cams)
+                                                       uv_one_in_cam=new_uv_one_in_cams,
+                                                       augment_extrinsics=augment_extrinsics,
+                                                       object_com=s['current_pos'][obj_id])
 
         # centered_pc.append(s['rotated_raw_pointcloud'][i] - s['current_pos'][i])
         centered_pc.append(original_pc - s['current_pos'][obj_id])

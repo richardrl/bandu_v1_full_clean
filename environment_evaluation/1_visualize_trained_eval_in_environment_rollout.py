@@ -154,7 +154,8 @@ mean_s, scores = evaluate_using_env(env, models_dict, MODEL_DEVICE, pb_loop=args
     if "test_urdf_ids_per_episode" in locals() else None, ret_scores=True, vis_o3d=args.vis_o3d, save_o3d=args.save_o3d,
                                     use_gt_pts=args.use_gt_pts, use_pca_obb=args.use_pca_obb, img_render_dir=f"{args.results_dir}",
                                     fps_num_points=2048, block_base=args.block_base, use_ransac_full_pc=args.use_ransac_full_pc,
-                                    gen_antiparallel_rotation=args.gen_antiparallel_rotation)
+                                    gen_antiparallel_rotation=args.gen_antiparallel_rotation,
+                                    augment_extrinsics=True)
 print(f"Average stacked: {mean_s}")
 
 with open(f"../out/out/phase{args.phase}_scores_meanstacked{mean_s}.json", "w") as fp:
