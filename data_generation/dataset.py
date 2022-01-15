@@ -140,6 +140,7 @@ def absolute_file_paths(directory):
 
 def absolute_dir_paths(directory):
     path = os.path.abspath(directory)
+    # if this only returns one item, check that the directory is the parent of all the object directories
     return [entry.path for entry in os.scandir(path) if entry.is_dir()]
 
 
@@ -230,9 +231,6 @@ class PointcloudDataset(Dataset):
         df_row = self.data_df.loc[item]
         fp = df_row['file_path']
         main_dict = torch.load(fp)
-
-        import pdb
-        pdb.set_trace()
 
         # fps_pc = get_farthest_point_sampled_pointcloud(main_dict['rotated_pointcloud'],
         #                                                                         2048)

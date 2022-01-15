@@ -2,7 +2,7 @@
 # generates FPS and noisy pointclouds
 from data_generation.dataset import PointcloudDataset
 import torch
-from utils import pointcloud_util, camera_util
+from utils import pointcloud_util, camera_util, vis_util
 from pathlib import Path
 import sys
 from deco import *
@@ -11,6 +11,7 @@ import time
 import numpy as np
 from scipy.spatial.transform.rotation import Rotation as R
 import os
+import open3d
 
 
 # original_data_dir = "/home/richard/improbable/spinningup/out/canonical_pointclouds/bandu_val/test_v2/samples"
@@ -36,7 +37,7 @@ cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,
                                     camera_forward_z_offset=.2)
 
 
-@concurrent
+# @concurrent
 def uvd_to_sample_on_disk(depths, uv_one_in_cam, row, fps_idx, dic, original_pc):
     """
     Add noise to UV-Depth, do FPS sampling, and save to pickle.
@@ -65,16 +66,32 @@ def uvd_to_sample_on_disk(depths, uv_one_in_cam, row, fps_idx, dic, original_pc)
                                                        return_ims=False,
                                                        # rgb_ims=new_rgb_ims,
                                                        depth=new_depths,
-                                                       uv_one_in_cam=uv_one_in_cam)
+                                                       uv_one_in_cam=uv_one_in_cam)['aggregate_pointcloud']
 
         print(f"ln27 {row['sample_idx']} {fps_idx}")
 
     # center at COM
     original_pc = original_pc - dic['position']
 
+    import pdb
+    pdb.set_trace()
     # record camera index for each point
     # downsample according to XYZ, while recording indices
+
+    pcd = vis_util.make_point_cloud_o3d(original_pc, color=[0, 0, 0])
+
+    obb = open3d.geometry.OrientedBoundingBox.create_from_points(open3d.utility.Vector3dVector(original_pc))
+
+    # output_pcd: new_num_points, 3
+    # cubic_id_to_original_indices: new_num_points, max_indices_associated_with_single_cubic_pt
+    output_pcd, cubic_id_to_original_indices, _ = pcd.voxel_down_sample_and_trace(voxel_size=0.004,
+                                                      min_bound=obb.get_min_bound(),
+                                                      max_bound=obb.get_max_bound())
+
     # use indices to get the camera index
+    # for every pt in the voxelized pcd, recreate the partial pointcloud by getting the camera idx associated with the
+    # mode of the indices associated to the cubic id
+
     # now, we can get the partial depth values and the associated camera label
 
 
@@ -97,7 +114,8 @@ def uvd_to_sample_on_disk(depths, uv_one_in_cam, row, fps_idx, dic, original_pc)
     del new_dic['depths']
     torch.save(new_dic, new_samples_dir / row['object_name'] / f"{row['sample_idx']*num_fps_samples + fps_idx}.pkl")
 
-@synchronized
+
+# @synchronized
 def generate_samples_from_canonical_pointclouds():
     """
     Takes in full pointcloud and processes it
