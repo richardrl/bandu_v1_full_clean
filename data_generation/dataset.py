@@ -205,7 +205,8 @@ class PointcloudDataset(Dataset):
                  dont_make_btb=False,
                  randomize_z_canonical=False,
                  further_downsample_frac=None,
-                 augment_extrinsics=False):
+                 augment_extrinsics=False,
+                 depth_noise_scale=1.):
 
         self.data_df = read_data_dir(data_dir)
         self.data_dir = data_dir
@@ -236,6 +237,7 @@ class PointcloudDataset(Dataset):
                                     camera_forward_z_offset=.2)
 
         self.augment_extrinsics = augment_extrinsics
+        self.depth_noise_scale = depth_noise_scale
 
     def __len__(self):
         # returns number of rows in dataframe
@@ -321,8 +323,10 @@ class PointcloudDataset(Dataset):
             resultant_quat = np.array(main_dict['rotated_quat'])
 
         working_partial_pcs = []
-
+        working_partial_pcs_colors = []
         test_partial_pcs = []
+
+        colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 0]]
 
         for partial_pc_idx, partial_pc in enumerate(partial_pcs):
             # center partial pc
@@ -348,26 +352,31 @@ class PointcloudDataset(Dataset):
             partial_pc = aug_rot.apply(partial_pc)
 
             # aug 4: extrinsic trans
-            # if self.augment_extrinsics:
-            #     partial_pc += (np.random.uniform(3) - .5) * np.array([.04, .04, .005])
+            if self.augment_extrinsics:
+                partial_pc += (np.random.uniform(3) - .5) * np.array([.02, .02, .005])
 
             # aug 5: augment with depth-conditional noise
             # convert to depth
             # augment with depth conditional noise
             # convert back to pc
-            # pc_in_cam = (np.linalg.inv(self.cameras[partial_pc_idx]['cam_ext_mat']) @
-            #             np.concatenate([partial_pc, np.ones((partial_pc.shape[0], 1))], axis=-1).T).T
-            # pc_in_cam[:, -2] = pointcloud_util.augment_depth_realsense(pc_in_cam[:, -2]).copy()
-            #
-            # partial_pc = (self.cameras[partial_pc_idx]['cam_ext_mat'] @
-            #             pc_in_cam.T).T
+            pc_in_cam = (np.linalg.inv(self.cameras[partial_pc_idx].cam_ext_mat) @
+                        np.concatenate([partial_pc, np.ones((partial_pc.shape[0], 1))], axis=-1).T).T
+            pc_in_cam[:, -2] = pointcloud_util.augment_depth_realsense(pc_in_cam[:, -2],
+                                                                       coefficient_scale=self.depth_noise_scale).copy()
+
+            partial_pc = (self.cameras[partial_pc_idx].cam_ext_mat @
+                        pc_in_cam.T).T
 
             working_partial_pcs.append(partial_pc)
 
-        print("ln368")
-        pc = np.concatenate(test_partial_pcs, axis=0)[:, :3]
+            working_partial_pcs_colors.append(np.tile(colors[partial_pc_idx], (partial_pc.shape[0], 1)))
 
-        pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
+        print("ln368")
+        pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
+
+        pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
+
+        pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
         # visualize
         o3d.visualization.draw_geometries([pcd,
                                            o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
@@ -442,5 +451,7 @@ class PointcloudDataset(Dataset):
 
 
 if __name__ == '__main__':
-    pcdset = PointcloudDataset("../out/canonical_pointclouds/test/voxelized_samples")
+    pcdset = PointcloudDataset("../out/canonical_pointclouds/test/voxelized_samples",
+                               augment_extrinsics=True,
+                               depth_noise_scale=1.5)
     sample = pcdset.__getitem__(0)
