@@ -165,21 +165,21 @@ def uvd_to_segmented_depth(depths, uv_one_in_cam, row, fps_idx, dic, original_pc
 
 
     # uniform sample before FPS
-    # original_pc = original_pc[np.random.choice(original_pc.shape[0], 10000, replace=False)]
+    # original_centered_pc = original_centered_pc[np.random.choice(original_centered_pc.shape[0], 10000, replace=False)]
     #
-    # fps_pc = pointcloud_util.get_farthest_point_sampled_pointcloud(original_pc,
+    # fps_pc = pointcloud_util.get_farthest_point_sampled_pointcloud(original_centered_pc,
     #                                                2048)
 
     new_dic = dic.copy()
 
     new_dic['aggregate_uv1incam_depth_and_cam_idxs'] = aggregate_uv1incam_depth_and_cam_idxs.copy()
-    # original_pc_in_canonical = R.from_quat(dic['rotated_quat']).inv().apply(original_pc)
+    # original_pc_in_canonical = R.from_quat(dic['rotated_quat']).inv().apply(original_centered_pc)
     #
     # new_dic['canonical_min_height'] = np.min(original_pc_in_canonical[:, -1])
     # new_dic['canonical_max_height'] = np.max(original_pc_in_canonical[:, -1])
     # new_dic['rotated_pointcloud'] = fps_pc.copy()
     #
-    del new_dic['original_rotated_pointcloud']
+    del new_dic['original_rotated_centered_pointcloud']
     del new_dic['uv_one_in_cam']
     del new_dic['depths']
     torch.save(new_dic, new_samples_dir / row['object_name'] / f"{row['sample_idx']*num_fps_samples + fps_idx}.pkl")
@@ -205,7 +205,7 @@ def generate_samples_from_canonical_pointclouds():
 
         dic = torch.load(row['file_path'])
 
-        original_pc = dic['original_rotated_pointcloud']
+        original_pc = dic['original_rotated_centered_pointcloud']
         depths = dic['depths']
         uv_one_in_cam = dic['uv_one_in_cam']
 

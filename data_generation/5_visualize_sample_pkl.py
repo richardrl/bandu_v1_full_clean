@@ -8,7 +8,7 @@ sample_pkl_path = sys.argv[1]
 sample = torch.load(sample_pkl_path)
 
 # visualize
-vpcd = vis_util.make_point_cloud_o3d(sample['original_rotated_pointcloud'], color=[0.,0.,0.])
+vpcd = vis_util.make_point_cloud_o3d(sample['original_rotated_centered_pointcloud'], color=[0.,0.,0.])
 # vpcd = vis_util.make_point_cloud_o3d(sample['rotated_pointcloud'][0],
 #                                      color=make_colors(sample['bottom_thresholded_boolean']))
 

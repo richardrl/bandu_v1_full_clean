@@ -274,7 +274,7 @@ class PointcloudDataset(Dataset):
         pc = np.concatenate(partial_pcs, axis=0)
 
         # center pc
-        # pc = pc - main_dict['position']
+        pc = pc - main_dict['position']
 
 
         print("280")

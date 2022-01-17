@@ -13,14 +13,14 @@ import pybullet as p
 import torch
 import random
 from scipy.spatial.transform import Rotation as R
-from utils import camera_util, bandu_util, pointcloud_util, pointnet2_utils
+from utils import camera_util, bandu_util, pointcloud_util, pointnet2_utils, pb_util
 
 import hashlib
 import time
 import itertools
 import numpy as np
 
-@concurrent
+# @concurrent
 def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, global_scaling, pb_loop=False, simulate=True,
                                        compute_oriented_normals=False, o3d_viz=False, data_dir=None,
                                        object_name=None):
@@ -66,12 +66,12 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
     if pb_loop:
         pb_util.pb_key_loop('n')
 
+
     if simulate:
         for _ in range(1000):
             p.stepSimulation()
 
     current_p, current_q = p.getBasePositionAndOrientation(current_oid)
-
     # pointcloud, depths, uv_one_in_cam = camera_util.get_joint_pointcloud(cameras,
     #                                               obj_id=current_oid,
     #                                               filter_table_height=False,
@@ -145,7 +145,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
     p.removeBody(current_oid)
 
     out_dic = dict(
-        original_rotated_pointcloud=pointcloud - current_p,
+        original_rotated_centered_pointcloud=pointcloud - current_p,
         position=np.array(current_p),
         rotated_quat=np.array(current_q),
         depths=depths,
@@ -158,7 +158,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
 
 
 
-@synchronized
+# @synchronized
 def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict, urdf_dir, prefix, num_samples, urdfs, pointcloud_output_dir,
                                           height_offset=.2,
                                           global_scaling=1.5,
@@ -234,25 +234,23 @@ if __name__ == "__main__":
     parser.add_argument('--height_offset', type=float, default=.4, help="Height offset from the table when you drop it")
     parser.add_argument('--global_scaling', type=float, default=1.5)
     parser.add_argument('--num_samples', type=int, default=1)
-    parser.add_argument('--pb_loop', action='store_true')
+    parser.add_argument('--pb_loop', action='store_true', help="Visualize pb and use keys to step forward")
     parser.add_argument('--compute_oriented_normals', action='store_true')
     parser.add_argument('--show_cams', action='store_true')
     parser.add_argument('--pc_save_dir', help="Save dir for canonical pointclouds samples",
                         default="out/canonical_pointclouds")
-    parser.add_argument('--no_table', action='store_false')
-    parser.add_argument('--no_simulate', action='store_false')
+    parser.add_argument('--no_table', action='store_true')
+    parser.add_argument('--no_simulate', action='store_true')
     parser.set_defaults(simulate=True)
     parser.set_defaults(table=True)
 
     args = parser.parse_args()
 
-
-    # plane_id, table_id = bandu_util.load_scene(p_connect_type=p.GUI if args.pb_loop else p.DIRECT, realtime=0)
-    p.connect(p.DIRECT)
+    plane_id, table_id = bandu_util.load_scene(p_connect_type=p.GUI if args.pb_loop else p.DIRECT, realtime=0)
 
     # p.removeBody(plane_id)
-    # if args.no_table:
-    #     p.removeBody(table_id)
+    if args.no_table:
+        p.removeBody(table_id)
 
     cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,
                                         camera_forward_z_offset=.2)
