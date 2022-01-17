@@ -9,6 +9,7 @@ import random
 import os
 import json
 from deco import *
+import torch
 
 
 class PointcloudSampler:
@@ -74,7 +75,6 @@ def get_farthest_point_sampled_pointcloud(pointcloud, num_points_to_sample, norm
         # return pointcloud[fps_indices, :], normals[fps_indices, :]
         return pointcloud[fps_indices, :]
 
-import torch
 # def get_fps_indices_concurrent(pointcloud, num_points_to_sample, tuple_idx, sample_idx):
 #     torch.manual_seed(sample_idx)
 #     random.seed(sample_idx)

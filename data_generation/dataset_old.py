@@ -1,18 +1,9 @@
 from torch.utils.data import Dataset
 import pandas as pd
-from utils import vis_util, mesh_util, surface_util, pointcloud_util
+from utils import vis_util, mesh_util, surface_util
 import open3d as o3d
 
-# from utils.pointcloud_util import *
-import numpy as np
-from utils import camera_util
-
-from bandu.config import BANDU_ROOT
-import pickle
-from scipy.spatial.transform import Rotation as R
-import torch
-
-import os
+from utils.pointcloud_util import *
 
 
 def get_bti(batched_pointcloud,
@@ -52,6 +43,8 @@ def get_bti(batched_pointcloud,
     #     # add 1% each time to both start, stop frac
     #     # try to fit a plane
     #     # pick the plane with the closest normal
+    #     import pdb
+    #     pdb.set_trace()
     #
     # else:
     # batch_size x num_objects x num_points
@@ -204,8 +197,7 @@ class PointcloudDataset(Dataset):
                  max_frac_threshold=.1,
                  dont_make_btb=False,
                  randomize_z_canonical=False,
-                 further_downsample_frac=None,
-                 augment_extrinsics=False):
+                 further_downsample_frac=None):
 
         self.data_df = read_data_dir(data_dir)
         self.data_dir = data_dir
@@ -220,33 +212,13 @@ class PointcloudDataset(Dataset):
         self.threshold_frac = threshold_frac
 
         self.stats_dic = stats_dic
-
-        # do not call the below option if the pointcloud is already centered
         self.center_fps_pc = center_fps_pc
 
         self.linear_search = linear_search
         self.max_frac_threshold = max_frac_threshold
-
-        # btb: bottom thresholded boolean aka the binary contact mask
         self.dont_make_btb = dont_make_btb
         self.randomize_z_canonical = randomize_z_canonical
         self.further_downsample_frac = further_downsample_frac
-
-
-        cam_pkls = [str(BANDU_ROOT / "out/0_cam.pkl"),
-                    str(BANDU_ROOT / "out/1_cam.pkl"),
-                    str(BANDU_ROOT / "out/2_cam.pkl"),
-                    str(BANDU_ROOT / "out/3_cam.pkl")]
-
-        cameras = []
-        for cam_pkl in cam_pkls:
-            with open(cam_pkl, "rb") as fp:
-                cam = pickle.load(fp)
-                cameras.append(cam)
-
-        self.cameras = cameras
-
-        self.augment_extrinsics = augment_extrinsics
 
     def __len__(self):
         # returns number of rows in dataframe
@@ -262,35 +234,19 @@ class PointcloudDataset(Dataset):
         # fps_pc = get_farthest_point_sampled_pointcloud(main_dict['rotated_pointcloud'],
         #                                                                         2048)
 
-        # sample uniformly to get fixed size
-        sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]), size=2048, replace=False)
-
-        # -> 2048, 4 where the last dimension is the cam idx
-        uniform_sampled_agg_depth_cam_idxs = main_dict['aggregate_uv1incam_depth_and_cam_idxs'][sampled_idxs, :]
-
-        partial_pcs = camera_util.convert_uv_depth_matrix_to_pointcloud(uniform_sampled_agg_depth_cam_idxs,
-                                                          self.cameras)
-
-        pc = np.concatenate(partial_pcs, axis=0)
-
-        # center pc
-        # pc = pc - main_dict['position']
-
-
-        print("280")
-        pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
-        # visualize
-        o3d.visualization.draw_geometries([pcd,
-                                           o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
+        farthest_point_sampled_pointcloud = main_dict['rotated_pointcloud']
+        if self.further_downsample_frac:
+            farthest_point_sampled_pointcloud = farthest_point_sampled_pointcloud[np.random.choice(farthest_point_sampled_pointcloud.shape[0], 512, replace=False)]
+        if self.center_fps_pc:
+            farthest_point_sampled_pointcloud = farthest_point_sampled_pointcloud - main_dict['position']
 
         # augmentations and generations
         M = np.eye(3)
 
-        # TODO: all these transforms are calculated based off the original PC, is that correct...
         # aug 1: scale
         if self.scale_aug == "xyz":
             # fps_before = fps_pc.copy()
-            _, M_scale = pointcloud_util.scale_aug_pointcloud(pc,
+            _, M_scale = scale_aug_pointcloud(farthest_point_sampled_pointcloud,
                                             main_dict['rotated_quat'],
                                             self.max_z_scale, self.min_z_scale)
 
@@ -301,90 +257,50 @@ class PointcloudDataset(Dataset):
 
         # aug 2: shear
         if self.shear_aug == "xy":
-            _, M_tmp = pointcloud_util.shear_aug_pointcloud(pc,
+            _, M_tmp = shear_aug_pointcloud(farthest_point_sampled_pointcloud,
                                             main_dict['rotated_quat'],
                                             self.max_shear)
             M = M_tmp @ M
 
-        # finally, set the *partial PCs*
-        # import pdb
-        # pdb.set_trace()
-        # pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
-        # # visualize
-        # o3d.visualization.draw_geometries([pcd])
+        # finally, set the PC
+        # canonicalize
+        canonical = R.from_quat(main_dict['rotated_quat']).inv().apply(farthest_point_sampled_pointcloud)
 
-        """
-        Generate object-level args
-        """
+        # apply M
+        # order: scale, shear aug ->
+        # canonical_trans: all augs except final aug rotation applied
+        # the canonical trans is the object in the stacked pose
+        canonical_trans = (M @ canonical.T).T
+
+        # -> ORIGINAL QUAT -> AUG QUAT AROUND Z
+        farthest_point_sampled_pointcloud = R.from_quat(main_dict['rotated_quat']).apply(canonical_trans)
+
+        # aug 3: rot
+        # NOTE: THIS MUST HAPPEN AFTER APPLYING THE OTHER AUGS, AND THE ORIGINAL ROTATION!!
         if self.rot_aug == "z":
             aug_rot = R.from_euler("z", np.random.uniform(self.rot_mag_bound))
+
+            # -> augmented rotation applied to original rotated pc
+            farthest_point_sampled_pointcloud = aug_rot.apply(farthest_point_sampled_pointcloud)
+
+            # save rotation
+            resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
+            main_dict['rotated_quat'] = resultant_quat
+            # rotated_quats[sample_idx, 0] = resultant_quat
         elif self.rot_aug == "xyz":
             aug_rot = R.random()
+            farthest_point_sampled_pointcloud = aug_rot.apply(farthest_point_sampled_pointcloud)
+            resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
+            main_dict['rotated_quat'] = resultant_quat
+        else:
+            assert self.rot_aug is None
+            # rotated_pc_placeholder[sample_idx, 0] = fps_pc
+            resultant_quat = np.array(main_dict['rotated_quat'])
+            # rotated_quats[sample_idx, 0] = resultant_quat
 
-        working_partial_pcs = []
-
-        canonical_partial_pcs = []
-
-        for partial_pc_idx, partial_pc in enumerate(partial_pcs):
-            # center partial pc
-            partial_pc = partial_pc - main_dict['position']
-
-            canonical_partial_pc = R.from_quat(main_dict['rotated_quat']).inv().apply(partial_pc)
-
-            canonical_partial_pcs.append(canonical_partial_pc)
-            # apply M
-            # order: scale, shear aug ->
-            # canonical_trans: all augs except final aug rotation applied
-            # the canonical trans is the object in the stacked pose
-            canonical_transformation = (M @ canonical_partial_pc.T).T
-
-            # -> ORIGINAL QUAT -> AUG QUAT AROUND Z
-            partial_pc = R.from_quat(main_dict['rotated_quat']).apply(canonical_transformation)
-
-            # aug 3: rot
-            # NOTE: THIS MUST HAPPEN AFTER APPLYING THE OTHER AUGS, AND THE ORIGINAL ROTATION!!
-            if self.rot_aug == "z":
-                # -> augmented rotation applied to original rotated pc
-                partial_pc = aug_rot.apply(partial_pc)
-
-                # save rotation
-                resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
-                main_dict['rotated_quat'] = resultant_quat
-                # rotated_quats[sample_idx, 0] = resultant_quat
-            elif self.rot_aug == "xyz":
-                partial_pc = aug_rot.apply(partial_pc)
-                resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
-                main_dict['rotated_quat'] = resultant_quat
-            else:
-                assert self.rot_aug is None
-                # rotated_pc_placeholder[sample_idx, 0] = fps_pc
-                resultant_quat = np.array(main_dict['rotated_quat'])
-                # rotated_quats[sample_idx, 0] = resultant_quat
-
-            # aug 4: extrinsic trans
-            # if self.augment_extrinsics:
-            #     partial_pc += (np.random.uniform(3) - .5) * np.array([.04, .04, .005])
-
-            # aug 5: augment with depth-conditional noise
-            # convert to depth
-            # augment with depth conditional noise
-            # convert back to pc
-            # pc_in_cam = (np.linalg.inv(self.cameras[partial_pc_idx]['cam_ext_mat']) @
-            #             np.concatenate([partial_pc, np.ones((partial_pc.shape[0], 1))], axis=-1).T).T
-            # pc_in_cam[:, -2] = pointcloud_util.augment_depth_realsense(pc_in_cam[:, -2]).copy()
-            #
-            # partial_pc = (self.cameras[partial_pc_idx]['cam_ext_mat'] @
-            #             pc_in_cam.T).T
-
-            working_partial_pcs.append(partial_pc)
-
-        print("ln368")
-        pc = np.concatenate(canonical_partial_pcs, axis=0)[:, :3]
-
-        pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
-        # visualize
-        o3d.visualization.draw_geometries([pcd])
-
+        # pcd = vis_util.make_point_cloud_o3d(fps_pc, [1., 0., 0.])
+        # # visualize
+        # o3d.visualization.draw_geometries([pcd])
         if self.use_normals:
             # do same operation on base pc
             # transform base pc, and index to get the new normals
@@ -417,8 +333,10 @@ class PointcloudDataset(Dataset):
         else:
             fps_normals_transformed = None
 
+        # return (before_aug_fps_pc, resultant_quat, fps_pc, fps_normals_transformed)
+
         # add object dimension for solo object
-        main_dict['rotated_pointcloud'] = np.expand_dims(pc, axis=0).astype(float)
+        main_dict['rotated_pointcloud'] = np.expand_dims(farthest_point_sampled_pointcloud, axis=0).astype(float)
 
         # with pd.option_context('display.max_rows', None,
         #                        'display.max_columns', None,
@@ -428,8 +346,7 @@ class PointcloudDataset(Dataset):
         #     print(df_row['file_path'])
 
         if not self.dont_make_btb:
-            # make bti on fully augmented and noised pc
-            main_dict['bottom_thresholded_boolean'] = get_bti_from_rotated(pc,
+            main_dict['bottom_thresholded_boolean'] = get_bti_from_rotated(farthest_point_sampled_pointcloud,
                                             resultant_quat, self.threshold_frac, self.linear_search,
                                                                            max_z=main_dict['canonical_max_height']*M_scale[2, 2],
                                                                            min_z=main_dict['canonical_min_height']*M_scale[2, 2],
@@ -437,16 +354,17 @@ class PointcloudDataset(Dataset):
             assert np.sum(1-main_dict['bottom_thresholded_boolean']) >= 15, print(np.sum(1-main_dict['bottom_thresholded_boolean']))
 
         # 1-btb because 0s are contact points, 1s are background points
+
         if self.randomize_z_canonical:
             canonical_quat = R.from_euler("z", np.random.uniform(0, 2*np.pi)).as_quat()
             main_dict['canonical_quat'] = canonical_quat
 
             # undo the quat to get into canonical position, then apply the canonical rotation
             main_dict['relative_quat'] = (R.from_quat(canonical_quat) * R.from_quat(resultant_quat).inv()).as_quat()
-            main_dict['canonical_pointcloud'] = R.from_quat(main_dict['relative_quat']).apply(pc)
+            main_dict['canonical_pointcloud'] = R.from_quat(main_dict['relative_quat']).apply(farthest_point_sampled_pointcloud)
         else:
             main_dict['relative_quat'] = R.from_quat(resultant_quat).inv().as_quat()
-            main_dict['canonical_pointcloud'] = R.from_quat(main_dict['relative_quat']).apply(pc)
+            main_dict['canonical_pointcloud'] = R.from_quat(main_dict['relative_quat']).apply(farthest_point_sampled_pointcloud)
 
         if self.stats_dic:
             main_dict.update({k: np.expand_dims(np.array(v), 0) for k, v in self.stats_dic.items()})
@@ -454,5 +372,5 @@ class PointcloudDataset(Dataset):
 
 
 if __name__ == '__main__':
-    pcdset = PointcloudDataset("../out/canonical_pointclouds/jan14_train_test_data/voxelized_samples")
+    pcdset = PointcloudDataset("/home/richard/improbable/spinningup/out/canonical_pointclouds/bandu_val/v2_test/samples")
     sample = pcdset.__getitem__(0)

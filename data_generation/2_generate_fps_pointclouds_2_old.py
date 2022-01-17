@@ -17,12 +17,11 @@ import open3d
 # original_data_dir = "/home/richard/improbable/spinningup/out/canonical_pointclouds/bandu_val/test_v2/samples"
 original_data_dir = sys.argv[1]
 num_fps_samples = int(sys.argv[2])
-# randomize_noise = bool(int(sys.argv[3]))
+randomize_noise = bool(int(sys.argv[3]))
 
 pcdset_original = PointcloudDataset(original_data_dir)
 
-# new_samples_dir = Path(original_data_dir) / ".." / f"fps_randomizenoise{randomize_noise}_numfps{num_fps_samples}_samples"
-new_samples_dir = Path(original_data_dir) / ".." / f"voxelized_samples"
+new_samples_dir = Path(original_data_dir) / ".." / f"fps_randomizenoise{randomize_noise}_numfps{num_fps_samples}_samples"
 
 
 object_names = pcdset_original.data_df.object_name.unique()
@@ -38,35 +37,36 @@ cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,
 
 
 # @concurrent
-def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_pc):
+def uvd_to_segmented_depth(depths, uv_one_in_cam, row, fps_idx, dic, original_pc):
     """
 
     :param depths: List[numpy.ndarray]
-    :param uv_one_in_cam:
+    :param uv_one_in_cam: 2D
     :param row:
+    :param fps_idx:
     :param dic:
     :param original_pc:
     :return: Object-segmented depth
     """
-    # if randomize_noise:
-    #     active_camera_ids = []
-    #
-    #     for cam_id, dm in enumerate(depths):
-    #         if dm.size != 0:
-    #             active_camera_ids.append(cam_id)
-    #
-    #     new_depths = [pointcloud_util.augment_depth_realsense(dm, coefficient_scale=1)
-    #                   for dm in [depths[cid] for cid in active_camera_ids]]
-    #
-    #     original_pc = camera_util.get_joint_pointcloud([cameras[id_] for id_ in active_camera_ids],
-    #                                                    obj_id=None,
-    #                                                    filter_table_height=False,
-    #                                                    return_ims=False,
-    #                                                    # rgb_ims=new_rgb_ims,
-    #                                                    depth=new_depths,
-    #                                                    uv_one_in_cam=uv_one_in_cam)['aggregate_pointcloud']
-    #
-    #     print(f"ln27 {row['sample_idx']}")
+    if randomize_noise:
+        active_camera_ids = []
+
+        for cam_id, dm in enumerate(depths):
+            if dm.size != 0:
+                active_camera_ids.append(cam_id)
+
+        new_depths = [pointcloud_util.augment_depth_realsense(dm, coefficient_scale=1)
+                      for dm in [depths[cid] for cid in active_camera_ids]]
+
+        original_pc = camera_util.get_joint_pointcloud([cameras[id_] for id_ in active_camera_ids],
+                                                       obj_id=None,
+                                                       filter_table_height=False,
+                                                       return_ims=False,
+                                                       # rgb_ims=new_rgb_ims,
+                                                       depth=new_depths,
+                                                       uv_one_in_cam=uv_one_in_cam)['aggregate_pointcloud']
+
+        print(f"ln27 {row['sample_idx']} {fps_idx}")
 
     # center at COM
     original_pc = original_pc - dic['position']
@@ -117,7 +117,7 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_pc):
         pt_cam_idx = original_pc_idx_to_cam_idxs[original_idx_corresponding_to_voxel_cubic_id]
 
         cam_idx_to_segmented_uv_one_in_cam[pt_cam_idx].append(aggregate_uv_one_in_cam[:, original_idx_corresponding_to_voxel_cubic_id])
-        cam_idx_to_segmented_depth[pt_cam_idx].append(aggregate_depths[original_idx_corresponding_to_voxel_cubic_id])
+        cam_idx_to_segmented_depth[pt_cam_idx].append(aggregate_depths[:, original_idx_corresponding_to_voxel_cubic_id])
 
 
     # variable size depth... will make the total number of depth points fixed later with uniform sampling
@@ -135,7 +135,7 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_pc):
     # make it all a big matrix for easy uniform sampling
     aggregate_uv1incam_depth_and_cam_idxs = np.concatenate([
         np.concatenate(cam_idx_to_segmented_uv_one_in_cam, axis=0),
-        np.expand_dims(np.concatenate(cam_idx_to_segmented_depth, axis=0), axis=-1),
+        np.concatenate(cam_idx_to_segmented_depth, axis=0),
         np.expand_dims(np.concatenate(cam_idxs_to_repeated_cam_idxs, axis=0), axis=-1),
     ], axis=-1)
 
@@ -182,7 +182,7 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_pc):
     del new_dic['original_rotated_pointcloud']
     del new_dic['uv_one_in_cam']
     del new_dic['depths']
-    torch.save(new_dic, new_samples_dir / row['object_name'] / f"{row['sample_idx']*num_fps_samples}.pkl")
+    torch.save(new_dic, new_samples_dir / row['object_name'] / f"{row['sample_idx']*num_fps_samples + fps_idx}.pkl")
 
 
 # @synchronized
@@ -194,15 +194,14 @@ def generate_samples_from_canonical_pointclouds():
     """
 
     holder = dict()
-    # for tupl in itertools.product(pcdset_original.data_df.iterrows(), range(num_fps_samples)):
-    for tupl in itertools.product(pcdset_original.data_df.iterrows()):
+    for tupl in itertools.product(pcdset_original.data_df.iterrows(), range(num_fps_samples)):
         row_info = tupl[0]
 
         index = row_info[0]
 
         row = row_info[1]
 
-        # fps_idx = tupl[1]
+        fps_idx = tupl[1]
 
         dic = torch.load(row['file_path'])
 
@@ -211,7 +210,8 @@ def generate_samples_from_canonical_pointclouds():
         uv_one_in_cam = dic['uv_one_in_cam']
 
         start = time.time()
-        holder[str(index) + str(row)] = uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_pc)
+        holder[str(index) + str(row) + str(fps_idx)] = uvd_to_segmented_depth(depths, uv_one_in_cam, row, fps_idx, dic,
+                                                                             original_pc)
 
         print("runtime uvd_to_sample_on_disk")
         print(time.time() - start)

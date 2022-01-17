@@ -134,6 +134,11 @@ To write to files in the mounted volume, make an "out" folder with permissions 7
 
 We need cuda10 to visualize. cuda11 to run on 3090 gtx cards.
 
+# Processing depth camera in sim
+1. Get raw, large pointcloud from pybullet cameras
+2. Voxel-based downsampling
+3. Uniform downsampling to 2048 (we can handle variable sized pointclouds, but this is done to ensure we stay within the computational limits)
+
 # Credits
 
 - https://github.com/yanx27/Pointnet_Pointnet2_pytorch
