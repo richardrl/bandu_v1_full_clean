@@ -206,10 +206,10 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
     End Unit Test
     """
 
-    # original_pc_in_canonical = R.from_quat(dic['rotated_quat']).inv().apply(original_centered_pc)
-    #
-    # new_dic['canonical_min_height'] = np.min(original_pc_in_canonical[:, -1])
-    # new_dic['canonical_max_height'] = np.max(original_pc_in_canonical[:, -1])
+    original_pc_in_canonical = R.from_quat(dic['rotated_quat']).inv().apply(original_centered_pc)
+
+    new_dic['canonical_min_height'] = np.min(original_pc_in_canonical[:, -1])
+    new_dic['canonical_max_height'] = np.max(original_pc_in_canonical[:, -1])
     # new_dic['rotated_pointcloud'] = fps_pc.copy()
     #
     del new_dic['original_rotated_centered_pointcloud']

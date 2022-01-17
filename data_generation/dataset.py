@@ -442,5 +442,5 @@ class PointcloudDataset(Dataset):
 
 
 if __name__ == '__main__':
-    pcdset = PointcloudDataset("../out/canonical_pointclouds/jan14_train_test_data/voxelized_samples")
+    pcdset = PointcloudDataset("../out/canonical_pointclouds/test/voxelized_samples")
     sample = pcdset.__getitem__(0)
