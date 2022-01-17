@@ -312,23 +312,26 @@ class PointcloudDataset(Dataset):
 
         working_partial_pcs = []
 
-        canonical_partial_pcs = []
+        test_partial_pcs = []
 
         for partial_pc_idx, partial_pc in enumerate(partial_pcs):
             # center partial pc
             partial_pc = partial_pc - main_dict['position']
 
+            # canonicalize before applying M, the shape transform
             canonical_partial_pc = R.from_quat(main_dict['rotated_quat']).inv().apply(partial_pc).copy()
 
-            canonical_partial_pcs.append(canonical_partial_pc)
             # apply M
             # order: scale, shear aug ->
             # canonical_trans: all augs except final aug rotation applied
             # the canonical trans is the object in the stacked pose
-            # canonical_transformation = (M @ canonical_partial_pc.T).T
-            #
-            # # -> ORIGINAL QUAT -> AUG QUAT AROUND Z
-            # partial_pc = R.from_quat(main_dict['rotated_quat']).apply(canonical_transformation)
+            canonical_partial_transformed = (M @ canonical_partial_pc.T).T
+
+            # -> ORIGINAL QUAT -> AUG QUAT AROUND Z
+            partial_pc = R.from_quat(main_dict['rotated_quat']).apply(canonical_partial_transformed)
+
+            test_partial_pcs.append(partial_pc)
+
             #
             # # aug 3: rot
             # # NOTE: THIS MUST HAPPEN AFTER APPLYING THE OTHER AUGS, AND THE ORIGINAL ROTATION!!
@@ -348,7 +351,6 @@ class PointcloudDataset(Dataset):
             #     assert self.rot_aug is None
             #     # rotated_pc_placeholder[sample_idx, 0] = fps_pc
             #     resultant_quat = np.array(main_dict['rotated_quat'])
-            #     # rotated_quats[sample_idx, 0] = resultant_quat
 
             # aug 4: extrinsic trans
             # if self.augment_extrinsics:
@@ -368,7 +370,7 @@ class PointcloudDataset(Dataset):
             working_partial_pcs.append(partial_pc)
 
         print("ln368")
-        pc = np.concatenate(canonical_partial_pcs, axis=0)[:, :3]
+        pc = np.concatenate(test_partial_pcs, axis=0)[:, :3]
 
         pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
         # visualize
