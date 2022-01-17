@@ -145,25 +145,11 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
     # downsample according to XYZ, while recording indices
 
     """Unit test"""
-    cameras_ = []
-
-    from bandu.config import BANDU_ROOT
-    cam_pkls = [str(BANDU_ROOT / "out/0_cam.pkl"),
-                str(BANDU_ROOT / "out/1_cam.pkl"),
-                str(BANDU_ROOT / "out/2_cam.pkl"),
-                str(BANDU_ROOT / "out/3_cam.pkl")]
-
-    import pickle
-    for cam_pkl in cam_pkls:
-        with open(cam_pkl, "rb") as fp:
-            cam = pickle.load(fp)
-            cameras_.append(cam)
-
     aggregate_uv1incam_depth_and_cam_idxs = create_aggregate_uv1incam_depth_and_cam_idxs(uv_one_in_cam,
                                                  depths,
                                                  False)
     partial_pcs = camera_util.convert_uv_depth_matrix_to_pointcloud(aggregate_uv1incam_depth_and_cam_idxs.copy(),
-                                                                    cameras_)
+                                                                    cameras)
 
     pc = np.concatenate(partial_pcs, axis=0)
 
@@ -206,22 +192,9 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
     Unit test
     """
     print("ln150")
-    cameras_ = []
-
-    from bandu.config import BANDU_ROOT
-    cam_pkls = [str(BANDU_ROOT / "out/0_cam.pkl"),
-                str(BANDU_ROOT / "out/1_cam.pkl"),
-                str(BANDU_ROOT / "out/2_cam.pkl"),
-                str(BANDU_ROOT / "out/3_cam.pkl")]
-
-    import pickle
-    for cam_pkl in cam_pkls:
-        with open(cam_pkl, "rb") as fp:
-            cam = pickle.load(fp)
-            cameras_.append(cam)
 
     partial_pcs = camera_util.convert_uv_depth_matrix_to_pointcloud(aggregate_uv1incam_depth_and_cam_idxs.copy(),
-                                                                    cameras_)
+                                                                    cameras)
 
     pc = np.concatenate(partial_pcs, axis=0)
 

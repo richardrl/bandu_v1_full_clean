@@ -87,20 +87,20 @@ def get_joint_pointcloud(airobot_cameras,
 
     camera_idx_labels = [np.ones_like(output['pcd_pts'])*output_idx for output_idx, output in enumerate(outputs)]
 
-    if augment_extrinsics:
-        # apply random transform about the object COM
-        # should be small rotation, larger rotation
-        pointclouds_tmp = []
-
-        for partial_pc in pointclouds:
-            centered_partial_pc = partial_pc - object_com
-
-            # randomize translation
-            centered_partial_pc += (np.random.uniform(3) - .5) * np.array([.04, .04, .005])
-
-            pointclouds_tmp.append(centered_partial_pc + object_com)
-
-        pointclouds = pointclouds_tmp
+    # if augment_extrinsics:
+    #     # apply random transform about the object COM
+    #     # should be small rotation, larger rotation
+    #     pointclouds_tmp = []
+    #
+    #     for partial_pc in pointclouds:
+    #         centered_partial_pc = partial_pc - object_com
+    #
+    #         # randomize translation
+    #         centered_partial_pc += (np.random.uniform(3) - .5) * np.array([.04, .04, .005])
+    #
+    #         pointclouds_tmp.append(centered_partial_pc + object_com)
+    #
+    #     pointclouds = pointclouds_tmp
 
     return dict(
         aggregate_pointcloud=np.concatenate(pointclouds, axis=0),
@@ -220,7 +220,7 @@ def convert_uv_depth_matrix_to_pointcloud(aggregate_uv1incam_depth_and_cam_idxs,
         one_cam_data = aggregate_uv1incam_depth_and_cam_idxs[aggregate_uv1incam_depth_and_cam_idxs[:, -1] == cam_idx]
         partial_pc = convert_uv_depth_to_pointcloud(one_cam_data[:, :3].T, #uvone
                                        one_cam_data[:, 3].T, # depth
-                                       cam['cam_ext_mat'])
+                                       cam.cam_ext_mat)
 
         # from utils import vis_util
         # import open3d as o3d
@@ -251,7 +251,9 @@ if __name__ == "__main__":
             cameras.append(cam)
 
     from utils.vis_util import make_point_cloud_o3d
-    pc = convert_uv_depth_to_pointcloud(canonical_pkl['uv_one_in_cam'][0], canonical_pkl['depths'][0], cameras[0]['cam_ext_mat'])
+    pc = convert_uv_depth_to_pointcloud(canonical_pkl['uv_one_in_cam'][0],
+                                        canonical_pkl['depths'][0],
+                                        cameras[0]['cam_ext_mat'])
 
     open3d.visualization.draw_geometries([make_point_cloud_o3d(pc, [0, 0, 0])])
 
