@@ -318,37 +318,37 @@ class PointcloudDataset(Dataset):
             # center partial pc
             partial_pc = partial_pc - main_dict['position']
 
-            canonical_partial_pc = R.from_quat(main_dict['rotated_quat']).inv().apply(partial_pc)
+            canonical_partial_pc = R.from_quat(main_dict['rotated_quat']).inv().apply(partial_pc).copy()
 
             canonical_partial_pcs.append(canonical_partial_pc)
             # apply M
             # order: scale, shear aug ->
             # canonical_trans: all augs except final aug rotation applied
             # the canonical trans is the object in the stacked pose
-            canonical_transformation = (M @ canonical_partial_pc.T).T
-
-            # -> ORIGINAL QUAT -> AUG QUAT AROUND Z
-            partial_pc = R.from_quat(main_dict['rotated_quat']).apply(canonical_transformation)
-
-            # aug 3: rot
-            # NOTE: THIS MUST HAPPEN AFTER APPLYING THE OTHER AUGS, AND THE ORIGINAL ROTATION!!
-            if self.rot_aug == "z":
-                # -> augmented rotation applied to original rotated pc
-                partial_pc = aug_rot.apply(partial_pc)
-
-                # save rotation
-                resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
-                main_dict['rotated_quat'] = resultant_quat
-                # rotated_quats[sample_idx, 0] = resultant_quat
-            elif self.rot_aug == "xyz":
-                partial_pc = aug_rot.apply(partial_pc)
-                resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
-                main_dict['rotated_quat'] = resultant_quat
-            else:
-                assert self.rot_aug is None
-                # rotated_pc_placeholder[sample_idx, 0] = fps_pc
-                resultant_quat = np.array(main_dict['rotated_quat'])
-                # rotated_quats[sample_idx, 0] = resultant_quat
+            # canonical_transformation = (M @ canonical_partial_pc.T).T
+            #
+            # # -> ORIGINAL QUAT -> AUG QUAT AROUND Z
+            # partial_pc = R.from_quat(main_dict['rotated_quat']).apply(canonical_transformation)
+            #
+            # # aug 3: rot
+            # # NOTE: THIS MUST HAPPEN AFTER APPLYING THE OTHER AUGS, AND THE ORIGINAL ROTATION!!
+            # if self.rot_aug == "z":
+            #     # -> augmented rotation applied to original rotated pc
+            #     partial_pc = aug_rot.apply(partial_pc)
+            #
+            #     # save rotation
+            #     resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
+            #     main_dict['rotated_quat'] = resultant_quat
+            #     # rotated_quats[sample_idx, 0] = resultant_quat
+            # elif self.rot_aug == "xyz":
+            #     partial_pc = aug_rot.apply(partial_pc)
+            #     resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
+            #     main_dict['rotated_quat'] = resultant_quat
+            # else:
+            #     assert self.rot_aug is None
+            #     # rotated_pc_placeholder[sample_idx, 0] = fps_pc
+            #     resultant_quat = np.array(main_dict['rotated_quat'])
+            #     # rotated_quats[sample_idx, 0] = resultant_quat
 
             # aug 4: extrinsic trans
             # if self.augment_extrinsics:
@@ -372,7 +372,9 @@ class PointcloudDataset(Dataset):
 
         pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
         # visualize
-        o3d.visualization.draw_geometries([pcd])
+        o3d.visualization.draw_geometries([pcd,
+                                           o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
+                                           ])
 
         if self.use_normals:
             # do same operation on base pc
