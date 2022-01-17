@@ -1,6 +1,7 @@
+import open3d.visualization
 from torch.utils.data import Dataset
 import pandas as pd
-from utils import vis_util, mesh_util, surface_util, pointcloud_util
+from utils import vis_util, mesh_util, surface_util, pointcloud_util, color_util
 import open3d as o3d
 
 # from utils.pointcloud_util import *
@@ -106,10 +107,10 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
                                                                                                       min_z=min_z,
                                                                                                       max_z=max_z)
                     # TODO: fix this
-                    # print("Successfully found rotmat")
+                    print("Successfully found rotmat")
                 except Exception as e:
-                    # print("Failed to fit rotmat")
-                    # print(e)
+                    print("Failed to fit rotmat")
+                    print(e)
                     continue
                 # print(relative_rotmat)
                 found_rotmats_distance_to_identity.append(np.linalg.norm(relative_rotmat - np.eye(3)))
@@ -267,12 +268,11 @@ class PointcloudDataset(Dataset):
         # center pc
         pc = pc - main_dict['position']
 
-
-        print("280")
-        pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
-        # visualize
-        o3d.visualization.draw_geometries([pcd,
-                                           o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
+        # print("280")
+        # pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
+        # # visualize
+        # o3d.visualization.draw_geometries([pcd,
+        #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
 
         # augmentations and generations
         M = np.eye(3)
@@ -371,17 +371,6 @@ class PointcloudDataset(Dataset):
 
             working_partial_pcs_colors.append(np.tile(colors[partial_pc_idx], (partial_pc.shape[0], 1)))
 
-        print("ln368")
-        pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
-
-        pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
-
-        pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
-        # visualize
-        o3d.visualization.draw_geometries([pcd,
-                                           o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
-                                           ])
-
         if self.use_normals:
             # do same operation on base pc
             # transform base pc, and index to get the new normals
@@ -426,11 +415,43 @@ class PointcloudDataset(Dataset):
 
         if not self.dont_make_btb:
             # make bti on fully augmented and noised pc
+            # import pdb
+            # pdb.set_trace()
             main_dict['bottom_thresholded_boolean'] = get_bti_from_rotated(pc,
                                             resultant_quat, self.threshold_frac, self.linear_search,
                                                                            max_z=main_dict['canonical_max_height']*M_scale[2, 2],
                                                                            min_z=main_dict['canonical_min_height']*M_scale[2, 2],
                                                                            max_frac_threshold=self.max_frac_threshold).astype(float).squeeze(-1)
+
+            if np.sum(1-main_dict['bottom_thresholded_boolean']) < 15:
+                print("ln427")
+                pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
+
+                pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
+
+                pcd = vis_util.make_point_cloud_o3d(R.from_quat(resultant_quat).inv().apply(pc), pc_colors)
+                # pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
+                # visualize
+                o3d.visualization.draw_geometries([pcd,
+                                                   o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
+                                                   ])
+
+
+                vis_util.make_point_cloud_o3d(pc,
+                                              color=vis_util.make_colors(main_dict['bottom_thresholded_boolean'],
+                                                                background_color=color_util.MURKY_GREEN,
+                                                                surface_color=color_util.YELLOW))
+
+                main_dict['bottom_thresholded_boolean'] = get_bti_from_rotated(pc,
+                                                                               resultant_quat, self.threshold_frac,
+                                                                               self.linear_search,
+                                                                               max_z=main_dict['canonical_max_height'] *
+                                                                                     M_scale[2, 2],
+                                                                               min_z=main_dict['canonical_min_height'] *
+                                                                                     M_scale[2, 2],
+                                                                               max_frac_threshold=self.max_frac_threshold).astype(
+                    float).squeeze(-1)
+
             assert np.sum(1-main_dict['bottom_thresholded_boolean']) >= 15, print(np.sum(1-main_dict['bottom_thresholded_boolean']))
 
         # 1-btb because 0s are contact points, 1s are background points

@@ -43,7 +43,7 @@ train_dset = PointcloudDataset(train_dset_samples_dir,
                                stats_dic=None,
                                threshold_frac=threshold_frac)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=batch_size, drop_last=True, shuffle=True,
-                           num_workers=16)
+                           num_workers=0)
 
 print("ln37 total dset samples")
 print(train_dset.__len__())
