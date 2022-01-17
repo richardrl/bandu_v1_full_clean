@@ -11,7 +11,7 @@ from bandu.config import BANDU_ROOT
 import pickle
 from scipy.spatial.transform import Rotation as R
 import torch
-
+import copy
 import os
 
 
@@ -307,8 +307,18 @@ class PointcloudDataset(Dataset):
         """
         if self.rot_aug == "z":
             aug_rot = R.from_euler("z", np.random.uniform(self.rot_mag_bound))
+
+            # save rotation
+            resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
+            main_dict['rotated_quat'] = resultant_quat
         elif self.rot_aug == "xyz":
             aug_rot = R.random()
+            resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
+            main_dict['rotated_quat'] = resultant_quat
+        else:
+            assert self.rot_aug is None
+            # rotated_pc_placeholder[sample_idx, 0] = fps_pc
+            resultant_quat = np.array(main_dict['rotated_quat'])
 
         working_partial_pcs = []
 
@@ -328,29 +338,14 @@ class PointcloudDataset(Dataset):
             canonical_partial_transformed = (M @ canonical_partial_pc.T).T
 
             # -> ORIGINAL QUAT -> AUG QUAT AROUND Z
-            partial_pc = R.from_quat(main_dict['rotated_quat']).apply(canonical_partial_transformed)
+            partial_pc = copy.deepcopy(R.from_quat(main_dict['rotated_quat']).apply(canonical_partial_transformed))
 
             test_partial_pcs.append(partial_pc)
 
-            #
-            # # aug 3: rot
-            # # NOTE: THIS MUST HAPPEN AFTER APPLYING THE OTHER AUGS, AND THE ORIGINAL ROTATION!!
-            # if self.rot_aug == "z":
-            #     # -> augmented rotation applied to original rotated pc
-            #     partial_pc = aug_rot.apply(partial_pc)
-            #
-            #     # save rotation
-            #     resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
-            #     main_dict['rotated_quat'] = resultant_quat
-            #     # rotated_quats[sample_idx, 0] = resultant_quat
-            # elif self.rot_aug == "xyz":
-            #     partial_pc = aug_rot.apply(partial_pc)
-            #     resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
-            #     main_dict['rotated_quat'] = resultant_quat
-            # else:
-            #     assert self.rot_aug is None
-            #     # rotated_pc_placeholder[sample_idx, 0] = fps_pc
-            #     resultant_quat = np.array(main_dict['rotated_quat'])
+
+            # aug 3: rot
+            # NOTE: THIS MUST HAPPEN AFTER APPLYING THE OTHER AUGS, AND THE ORIGINAL ROTATION!!
+            partial_pc = aug_rot.apply(partial_pc)
 
             # aug 4: extrinsic trans
             # if self.augment_extrinsics:
