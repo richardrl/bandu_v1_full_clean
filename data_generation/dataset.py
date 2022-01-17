@@ -232,19 +232,8 @@ class PointcloudDataset(Dataset):
         self.randomize_z_canonical = randomize_z_canonical
         self.further_downsample_frac = further_downsample_frac
 
-
-        cam_pkls = [str(BANDU_ROOT / "out/0_cam.pkl"),
-                    str(BANDU_ROOT / "out/1_cam.pkl"),
-                    str(BANDU_ROOT / "out/2_cam.pkl"),
-                    str(BANDU_ROOT / "out/3_cam.pkl")]
-
-        cameras = []
-        for cam_pkl in cam_pkls:
-            with open(cam_pkl, "rb") as fp:
-                cam = pickle.load(fp)
-                cameras.append(cam)
-
-        self.cameras = cameras
+        self.cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,
+                                    camera_forward_z_offset=.2)
 
         self.augment_extrinsics = augment_extrinsics
 

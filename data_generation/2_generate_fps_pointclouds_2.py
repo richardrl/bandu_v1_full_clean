@@ -153,11 +153,9 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
 
     pc = np.concatenate(partial_pcs, axis=0)
 
-    import pdb
-    pdb.set_trace()
 
     # original_centered_pc z and pc z should be around 1
-    assert np.all(np.isclose(pc, original_centered_pc))
+    assert np.all(np.isclose(pc - dic['position'], original_centered_pc))
     """
     Unit test
     """
@@ -199,13 +197,11 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
     pc = np.concatenate(partial_pcs, axis=0)
 
     # pc = pc-dic['position']
-    import pdb
-    pdb.set_trace()
-    print("ln154")
-    pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
-    # visualize
-    open3d.visualization.draw_geometries([pcd,
-                                          open3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
+    # print("ln154")
+    # pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
+    # # visualize
+    # open3d.visualization.draw_geometries([pcd,
+    #                                       open3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
     """
     End Unit Test
     """
