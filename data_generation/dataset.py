@@ -24,7 +24,7 @@ def get_bti(batched_pointcloud,
 
     Gets bottom thresholded indicators. In other words, a binary map of the contact region.
 
-    :param batched_pointcloud:
+    :param batched_pointcloud: np.ndarray[num_points, 3]
     :param threshold_bottom_of_upper_region: Bottom of upper region, expressed as fraction of total object height
     :param threshold_top_of_bottom_region: Top of bottom region, expressed as fraction of total object height
     :param line_search: search along the canonical axis for the section with the most support
@@ -38,8 +38,8 @@ def get_bti(batched_pointcloud,
 
     # since pointcloud is in the canonical position, we chop off the bottom points
     if max_z is None and min_z is None:
-        max_z = np.max(batched_pointcloud[..., -1], axis=-1)
-        min_z = np.min(batched_pointcloud[..., -1], axis=-1)
+        max_z = np.max(batched_pointcloud[..., -1])
+        min_z = np.min(batched_pointcloud[..., -1])
         object_heights = (max_z - min_z)
     else:
         object_heights = max_z - min_z
@@ -57,6 +57,11 @@ def get_bti(batched_pointcloud,
     # else:
     # batch_size x num_objects x num_points
     # returns true for all points that are ABOVE the z-threshold
+
+    # collect all points which are above the threshold region as the background points
+
+    print("ln63 threshold world bottom of upper region")
+    print(threshold_world_bottom_of_upper_region)
     bti = np.greater(batched_pointcloud[..., -1], np.expand_dims(threshold_world_bottom_of_upper_region, axis=-1))
 
     if threshold_top_of_bottom_region:
@@ -64,6 +69,8 @@ def get_bti(batched_pointcloud,
         bti_bottom_region = np.less(batched_pointcloud[..., -1], np.expand_dims(threshold_world_top_of_bottom_region, axis=-1))
 
         bti = bti + bti_bottom_region
+
+    print(f"Found contact points {np.sum(1-bti)}")
     bti = bti[..., None]
 
     # assert np.sum(bti) > 0 and np.sum(bti) < batched_pointcloud.shape[0], np.sum(bti)
@@ -95,6 +102,14 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
         # keep increasing the threshold until you get enough points
 
         def find_bottom_threshold_interval(threshold_frac_inner):
+            """
+
+            Args:
+                threshold_frac_inner: Scalar. The fraction of the z-range to use for the points container.
+
+            Returns:
+
+            """
             found_btis = []
             found_rotmats_distance_to_identity = []
 
@@ -404,6 +419,8 @@ class PointcloudDataset(Dataset):
             fps_normals_transformed = None
 
         # add object dimension for solo object
+        print("ln422 pc")
+        print(pc)
         main_dict['rotated_pointcloud'] = np.expand_dims(pc, axis=0).astype(float)
 
         # with pd.option_context('display.max_rows', None,
@@ -423,34 +440,36 @@ class PointcloudDataset(Dataset):
                                                                            min_z=main_dict['canonical_min_height']*M_scale[2, 2],
                                                                            max_frac_threshold=self.max_frac_threshold).astype(float).squeeze(-1)
 
-            if np.sum(1-main_dict['bottom_thresholded_boolean']) < 15:
-                print("ln427")
-                pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
-
-                pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
-
-                pcd = vis_util.make_point_cloud_o3d(R.from_quat(resultant_quat).inv().apply(pc), pc_colors)
-                # pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
-                # visualize
-                o3d.visualization.draw_geometries([pcd,
-                                                   o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
-                                                   ])
-
-
-                vis_util.make_point_cloud_o3d(pc,
-                                              color=vis_util.make_colors(main_dict['bottom_thresholded_boolean'],
-                                                                background_color=color_util.MURKY_GREEN,
-                                                                surface_color=color_util.YELLOW))
-
-                main_dict['bottom_thresholded_boolean'] = get_bti_from_rotated(pc,
-                                                                               resultant_quat, self.threshold_frac,
-                                                                               self.linear_search,
-                                                                               max_z=main_dict['canonical_max_height'] *
-                                                                                     M_scale[2, 2],
-                                                                               min_z=main_dict['canonical_min_height'] *
-                                                                                     M_scale[2, 2],
-                                                                               max_frac_threshold=self.max_frac_threshold).astype(
-                    float).squeeze(-1)
+            # if np.sum(1-main_dict['bottom_thresholded_boolean']) < 15:
+            #     print("ln427")
+            #     pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
+            #
+            #     pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
+            #
+            #     pcd = vis_util.make_point_cloud_o3d(R.from_quat(resultant_quat).inv().apply(pc), pc_colors)
+            #     # pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
+            #     # visualize
+            #     o3d.visualization.draw_geometries([pcd,
+            #                                        o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
+            #                                        ])
+            #
+            #
+            #     vis_util.make_point_cloud_o3d(pc,
+            #                                   color=vis_util.make_colors(main_dict['bottom_thresholded_boolean'],
+            #                                                     background_color=color_util.MURKY_GREEN,
+            #                                                     surface_color=color_util.YELLOW))
+            #
+            #     import pdb
+            #     pdb.set_trace()
+            #     main_dict['bottom_thresholded_boolean'] = get_bti_from_rotated(pc,
+            #                                                                    resultant_quat, self.threshold_frac,
+            #                                                                    self.linear_search,
+            #                                                                    max_z=main_dict['canonical_max_height'] *
+            #                                                                          M_scale[2, 2],
+            #                                                                    min_z=main_dict['canonical_min_height'] *
+            #                                                                          M_scale[2, 2],
+            #                                                                    max_frac_threshold=self.max_frac_threshold).astype(
+            #         float).squeeze(-1)
 
             assert np.sum(1-main_dict['bottom_thresholded_boolean']) >= 15, print(np.sum(1-main_dict['bottom_thresholded_boolean']))
 
@@ -468,6 +487,9 @@ class PointcloudDataset(Dataset):
 
         if self.stats_dic:
             main_dict.update({k: np.expand_dims(np.array(v), 0) for k, v in self.stats_dic.items()})
+
+
+        del main_dict['aggregate_uv1incam_depth_and_cam_idxs']
         return main_dict
 
 

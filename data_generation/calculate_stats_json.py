@@ -16,7 +16,7 @@ Settings
 train_dset_samples_dir = sys.argv[1]
 use_normals = int(sys.argv[2])
 batch_size = 34
-threshold_frac = .02
+threshold_frac = .06
 
 # num_epochs = 100
 
@@ -41,7 +41,8 @@ total_num_points = 0
 
 train_dset = PointcloudDataset(train_dset_samples_dir,
                                stats_dic=None,
-                               threshold_frac=threshold_frac)
+                               threshold_frac=threshold_frac,
+                               max_frac_threshold=.2)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=batch_size, drop_last=True, shuffle=True,
                            num_workers=0)
 

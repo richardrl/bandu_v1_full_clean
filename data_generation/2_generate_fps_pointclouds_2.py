@@ -250,4 +250,5 @@ def generate_samples_from_canonical_pointclouds():
         print("runtime uvd_to_sample_on_disk")
         print(time.time() - start)
 
+
 generate_samples_from_canonical_pointclouds()
