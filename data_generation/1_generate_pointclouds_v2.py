@@ -13,14 +13,14 @@ import pybullet as p
 import torch
 import random
 from scipy.spatial.transform import Rotation as R
-from utils import camera_util, bandu_util, pointcloud_util, pointnet2_utils, pb_util
+from utils import camera_util, bandu_util, pointcloud_util, pointnet2_utils, pb_util, vis_util
 
 import hashlib
 import time
 import itertools
 import numpy as np
 
-@concurrent
+# @concurrent
 def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, global_scaling, pb_loop=False, simulate=True,
                                        compute_oriented_normals=False, o3d_viz=False, data_dir=None,
                                        object_name=None):
@@ -144,6 +144,14 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
 
     p.removeBody(current_oid)
 
+    # import pdb
+    # pdb.set_trace()
+    #
+    # pcd = vis_util.make_point_cloud_o3d(R.from_quat(np.array(current_q)).inv().apply(pointcloud - current_p), [1., 0., 0.])
+    # # visualize
+    # o3d.visualization.draw_geometries([pcd,
+    #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
+
     out_dic = dict(
         original_rotated_centered_pointcloud=pointcloud - current_p,
         position=np.array(current_p),
@@ -158,7 +166,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
 
 
 
-@synchronized
+# @synchronized
 def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict, urdf_dir, prefix, num_samples, urdfs, pointcloud_output_dir,
                                           height_offset=.2,
                                           global_scaling=1.5,

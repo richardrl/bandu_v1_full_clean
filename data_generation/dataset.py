@@ -266,9 +266,6 @@ class PointcloudDataset(Dataset):
         fp = df_row['file_path']
         main_dict = torch.load(fp)
 
-        # fps_pc = get_farthest_point_sampled_pointcloud(main_dict['rotated_pointcloud'],
-        #                                                                         2048)
-
         # sample uniformly to get fixed size
         sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]), size=2048, replace=False)
 
@@ -283,11 +280,17 @@ class PointcloudDataset(Dataset):
         # center pc
         pc = pc - main_dict['position']
 
-        # print("280")
-        # pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
-        # # visualize
-        # o3d.visualization.draw_geometries([pcd,
-        #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
+        """
+        Start Unit Test
+        """
+        pcd = vis_util.make_point_cloud_o3d(R.from_quat(main_dict['rotated_quat']).inv().apply(pc),
+                                            [1., 0., 0.])
+        # visualize
+        o3d.visualization.draw_geometries([pcd,
+                                           o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
+        """
+        End Unit Test
+        """
 
         # augmentations and generations
         M = np.eye(3)
@@ -297,7 +300,7 @@ class PointcloudDataset(Dataset):
         if self.scale_aug == "xyz":
             # fps_before = fps_pc.copy()
             _, M_scale = pointcloud_util.scale_aug_pointcloud(pc,
-                                            main_dict['rotated_quat'],
+                                            np.array(main_dict['rotated_quat']),
                                             self.max_z_scale, self.min_z_scale)
 
             M = M_scale @ M
@@ -308,30 +311,23 @@ class PointcloudDataset(Dataset):
         # aug 2: shear
         if self.shear_aug == "xy":
             _, M_tmp = pointcloud_util.shear_aug_pointcloud(pc,
-                                            main_dict['rotated_quat'],
+                                            np.array(main_dict['rotated_quat']),
                                             self.max_shear)
             M = M_tmp @ M
 
-        # finally, set the *partial PCs*
-        # import pdb
-        # pdb.set_trace()
-        # pcd = vis_util.make_point_cloud_o3d(pc, [1., 0., 0.])
-        # # visualize
-        # o3d.visualization.draw_geometries([pcd])
-
         """
-        Generate object-level args
+        Generate object-level augs
         """
         if self.rot_aug == "z":
             aug_rot = R.from_euler("z", np.random.uniform(self.rot_mag_bound))
 
             # save rotation
             resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
-            main_dict['rotated_quat'] = resultant_quat
+            # main_dict['rotated_quat'] = resultant_quat
         elif self.rot_aug == "xyz":
             aug_rot = R.random()
             resultant_quat = (aug_rot * R.from_quat(np.array(main_dict['rotated_quat']))).as_quat()
-            main_dict['rotated_quat'] = resultant_quat
+            # main_dict['rotated_quat'] = resultant_quat
         else:
             assert self.rot_aug is None
             # rotated_pc_placeholder[sample_idx, 0] = fps_pc
@@ -349,6 +345,7 @@ class PointcloudDataset(Dataset):
 
             # canonicalize before applying M, the shape transform
             canonical_partial_pc = R.from_quat(main_dict['rotated_quat']).inv().apply(partial_pc).copy()
+            test_partial_pcs.append(canonical_partial_pc)
 
             # apply M
             # order: scale, shear aug ->
@@ -356,15 +353,14 @@ class PointcloudDataset(Dataset):
             # the canonical trans is the object in the stacked pose
             canonical_partial_transformed = (M @ canonical_partial_pc.T).T
 
-            # -> ORIGINAL QUAT -> AUG QUAT AROUND Z
-            partial_pc = copy.deepcopy(R.from_quat(main_dict['rotated_quat']).apply(canonical_partial_transformed))
 
-            test_partial_pcs.append(partial_pc)
+            # -> ORIGINAL QUAT -> AUG QUAT AROUND Z
+            partial_pc = copy.deepcopy(R.from_quat(resultant_quat).apply(canonical_partial_transformed))
 
 
             # aug 3: rot
             # NOTE: THIS MUST HAPPEN AFTER APPLYING THE OTHER AUGS, AND THE ORIGINAL ROTATION!!
-            partial_pc = aug_rot.apply(partial_pc)
+            # partial_pc = aug_rot.apply(partial_pc)
 
             # aug 4: extrinsic trans
             if self.augment_extrinsics:
@@ -423,6 +419,10 @@ class PointcloudDataset(Dataset):
         print(pc)
         main_dict['rotated_pointcloud'] = np.expand_dims(pc, axis=0).astype(float)
 
+        # it is important we set rotated_quat here. rotated_quat is assumed to be just the object pose
+        # (before augmentation) for most fo the above code.
+        main_dict['rotated_quat'] = resultant_quat
+
         # with pd.option_context('display.max_rows', None,
         #                        'display.max_columns', None,
         #                        'display.precision', 3,
@@ -440,18 +440,20 @@ class PointcloudDataset(Dataset):
                                                                            min_z=main_dict['canonical_min_height']*M_scale[2, 2],
                                                                            max_frac_threshold=self.max_frac_threshold).astype(float).squeeze(-1)
 
+            print("ln427")
+            pc = np.concatenate(test_partial_pcs, axis=0)[:, :3]
+
+            pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
+
+            pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
+
+            # pcd = vis_util.make_point_cloud_o3d(R.from_quat(resultant_quat).inv().apply(pc), pc_colors)
+            # pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
+            # visualize
+            o3d.visualization.draw_geometries([pcd,
+                                               o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
+                                               ])
             # if np.sum(1-main_dict['bottom_thresholded_boolean']) < 15:
-            #     print("ln427")
-            #     pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
-            #
-            #     pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
-            #
-            #     pcd = vis_util.make_point_cloud_o3d(R.from_quat(resultant_quat).inv().apply(pc), pc_colors)
-            #     # pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
-            #     # visualize
-            #     o3d.visualization.draw_geometries([pcd,
-            #                                        o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
-            #                                        ])
             #
             #
             #     vis_util.make_point_cloud_o3d(pc,
