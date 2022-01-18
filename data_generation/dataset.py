@@ -283,11 +283,11 @@ class PointcloudDataset(Dataset):
         """
         Start Unit Test
         """
-        pcd = vis_util.make_point_cloud_o3d(R.from_quat(main_dict['rotated_quat']).inv().apply(pc),
-                                            [1., 0., 0.])
-        # visualize
-        o3d.visualization.draw_geometries([pcd,
-                                           o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
+        # pcd = vis_util.make_point_cloud_o3d(R.from_quat(main_dict['rotated_quat']).inv().apply(pc),
+        #                                     [1., 0., 0.])
+        # # visualize
+        # o3d.visualization.draw_geometries([pcd,
+        #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
         """
         End Unit Test
         """
@@ -340,6 +340,10 @@ class PointcloudDataset(Dataset):
         colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 0]]
 
         for partial_pc_idx, partial_pc in enumerate(partial_pcs):
+            if partial_pc.size == 0:
+                # sometimes one or more of the depth cameras won't capture the object
+                # in that case we skip
+                continue
             # center partial pc
             partial_pc = partial_pc - main_dict['position']
 
@@ -372,6 +376,12 @@ class PointcloudDataset(Dataset):
             # convert back to pc
             pc_in_cam = (np.linalg.inv(self.cameras[partial_pc_idx].cam_ext_mat) @
                         np.concatenate([partial_pc, np.ones((partial_pc.shape[0], 1))], axis=-1).T).T
+
+            if pc_in_cam.size == 0:
+                import pdb
+                pdb.set_trace()
+
+            assert pc_in_cam.size != 0, print(item)
             pc_in_cam[:, -2] = pointcloud_util.augment_depth_realsense(pc_in_cam[:, -2],
                                                                        coefficient_scale=self.depth_noise_scale).copy()
 
@@ -440,19 +450,21 @@ class PointcloudDataset(Dataset):
                                                                            min_z=main_dict['canonical_min_height']*M_scale[2, 2],
                                                                            max_frac_threshold=self.max_frac_threshold).astype(float).squeeze(-1)
 
-            print("ln427")
-            pc = np.concatenate(test_partial_pcs, axis=0)[:, :3]
-
-            pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
-
-            pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
-
-            # pcd = vis_util.make_point_cloud_o3d(R.from_quat(resultant_quat).inv().apply(pc), pc_colors)
+            """
+            Start Unit Test
+            """
+            # print("ln427")
+            # pc = np.concatenate(test_partial_pcs, axis=0)[:, :3]
+            #
+            # pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
+            #
             # pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
-            # visualize
-            o3d.visualization.draw_geometries([pcd,
-                                               o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
-                                               ])
+            # o3d.visualization.draw_geometries([pcd,
+            #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
+            #                                    ])
+            """
+            End Unit Test
+            """
             # if np.sum(1-main_dict['bottom_thresholded_boolean']) < 15:
             #
             #

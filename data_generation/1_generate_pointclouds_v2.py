@@ -20,7 +20,7 @@ import time
 import itertools
 import numpy as np
 
-# @concurrent
+@concurrent
 def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, global_scaling, pb_loop=False, simulate=True,
                                        compute_oriented_normals=False, o3d_viz=False, data_dir=None,
                                        object_name=None):
@@ -166,7 +166,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
 
 
 
-# @synchronized
+@synchronized
 def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict, urdf_dir, prefix, num_samples, urdfs, pointcloud_output_dir,
                                           height_offset=.2,
                                           global_scaling=1.5,
@@ -246,7 +246,7 @@ if __name__ == "__main__":
     parser.add_argument('--compute_oriented_normals', action='store_true')
     parser.add_argument('--show_cams', action='store_true')
     parser.add_argument('--pc_save_dir', help="Save dir for canonical pointclouds samples",
-                        default="out/canonical_pointclouds")
+                        default="out/datasets")
     parser.add_argument('--no_table', action='store_true')
     parser.add_argument('--no_simulate', action='store_true')
     parser.set_defaults(simulate=True)
@@ -307,7 +307,8 @@ if __name__ == "__main__":
         object_name = bandu_util.get_object_names([urdf_path])[0]
         urdf_name_to_pointcloud_dict[object_name] = [None] * args.num_samples
 
-    generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict,
+    try:
+        generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict,
                                           args.urdf_dir,
                                           args.prefix,
                                           args.num_samples,
@@ -317,3 +318,5 @@ if __name__ == "__main__":
                                           pb_loop=args.pb_loop,
                                           height_offset=args.height_offset,
                                           simulate=args.simulate)
+    except Exception as e:
+        print(f"Exception {e}")

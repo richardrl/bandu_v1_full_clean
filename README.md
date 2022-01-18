@@ -42,14 +42,14 @@ Train
 ```
 cd bandu_v1_full_clean
 
-python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_train/ jan8_train --num_samples=10
+python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_train jan18_train --num_samples=10
 
-python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointclouds/jan8_train/canonical_pointcloud_samples 10 1
+python3 data_generation/2_generate_fps_pointclouds_2.py out/datasets/bandu_train/jan18_train/canonical_pointcloud_samples
  
-python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples 0
+python3 data_generation/calculate_stats_json.py out/datasets/bandu_train/jan18_train/voxelized_samples 0
 ```
 
-Val 
+Val (need to update)
 ```
 cd bandu_v1_full_clean
 
@@ -60,7 +60,7 @@ python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointcloud
 python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/jan8_val/fps_randomizenoiseTrue_numfps10_samples 0
 ```
 
-Test (engmikedset)
+Test (engmikedset) (need to update)
 ```
 cd bandu_v1_full_clean
 

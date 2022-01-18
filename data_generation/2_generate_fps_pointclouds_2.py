@@ -1,5 +1,5 @@
 # load original dataset
-# generates FPS and noisy pointclouds
+# voxelizes the samples and saves to disk
 from data_generation.dataset import PointcloudDataset
 import torch
 from utils import pointcloud_util, camera_util, vis_util
@@ -16,7 +16,7 @@ import open3d
 
 # original_data_dir = "/home/richard/improbable/spinningup/out/canonical_pointclouds/bandu_val/test_v2/samples"
 original_data_dir = sys.argv[1]
-num_fps_samples = int(sys.argv[2])
+# num_fps_samples = int(sys.argv[2])
 # randomize_noise = bool(int(sys.argv[3]))
 
 pcdset_original = PointcloudDataset(original_data_dir)
@@ -200,7 +200,7 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
     del new_dic['original_rotated_centered_pointcloud']
     del new_dic['uv_one_in_cam']
     del new_dic['depths']
-    torch.save(new_dic, new_samples_dir / row['object_name'] / f"{row['sample_idx']*num_fps_samples}.pkl")
+    torch.save(new_dic, new_samples_dir / row['object_name'] / f"{row['sample_idx']}.pkl")
 
 
 # @synchronized
