@@ -60,8 +60,8 @@ def get_bti(batched_pointcloud,
 
     # collect all points which are above the threshold region as the background points
 
-    print("ln63 threshold world bottom of upper region")
-    print(threshold_world_bottom_of_upper_region)
+    # print("ln63 threshold world bottom of upper region")
+    # print(threshold_world_bottom_of_upper_region)
     bti = np.greater(batched_pointcloud[..., -1], np.expand_dims(threshold_world_bottom_of_upper_region, axis=-1))
 
     if threshold_top_of_bottom_region:
@@ -70,7 +70,7 @@ def get_bti(batched_pointcloud,
 
         bti = bti + bti_bottom_region
 
-    print(f"Found contact points {np.sum(1-bti)}")
+    # print(f"Found contact points {np.sum(1-bti)}")
     bti = bti[..., None]
 
     # assert np.sum(bti) > 0 and np.sum(bti) < batched_pointcloud.shape[0], np.sum(bti)
@@ -122,10 +122,10 @@ def get_bti_from_rotated(rotated_batched_pointcloud, orientation_quat, threshold
                                                                                                       min_z=min_z,
                                                                                                       max_z=max_z)
                     # TODO: fix this
-                    print("Successfully found rotmat")
+                    # print("Successfully found rotmat")
                 except Exception as e:
-                    print("Failed to fit rotmat")
-                    print(e)
+                    # print("Failed to fit rotmat")
+                    # print(e)
                     continue
                 # print(relative_rotmat)
                 found_rotmats_distance_to_identity.append(np.linalg.norm(relative_rotmat - np.eye(3)))
@@ -444,7 +444,7 @@ class PointcloudDataset(Dataset):
             # make bti on fully augmented and noised pc
             # import pdb
             # pdb.set_trace()
-            main_dict['bottom_thresholded_boolean'] = get_bti_from_rotated(pc,
+            main_dict['bottom_thresholded_boolean'] = get_bti_from_rotated(np.concatenate(working_partial_pcs, axis=0)[:, :3],
                                             resultant_quat, self.threshold_frac, self.linear_search,
                                                                            max_z=main_dict['canonical_max_height']*M_scale[2, 2],
                                                                            min_z=main_dict['canonical_min_height']*M_scale[2, 2],
@@ -453,17 +453,40 @@ class PointcloudDataset(Dataset):
             """
             Start Unit Test
             """
-            # print("ln427")
-            # pc = np.concatenate(test_partial_pcs, axis=0)[:, :3]
-            #
-            # pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
-            #
-            # pcd = vis_util.make_point_cloud_o3d(pc, pc_colors)
-            # o3d.visualization.draw_geometries([pcd,
-            #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
-            #                                    ])
+            print("ln427")
+            canonical_pc = np.concatenate(test_partial_pcs, axis=0)[:, :3]
+
+            pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
+
+            pcd = vis_util.make_point_cloud_o3d(canonical_pc, pc_colors)
+            o3d.visualization.draw_geometries([pcd,
+                                               o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
+                                               ])
+
+
+
             """
             End Unit Test
+            """
+
+            """
+            Start Visualize Contact Points
+            """
+
+            print("ln427")
+            working_pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
+
+            o3d.visualization.draw_geometries([
+                                               o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0]),
+                                               vis_util.make_point_cloud_o3d(
+                                                   working_pc,
+                                                   color=vis_util.make_colors(main_dict['bottom_thresholded_boolean'],
+                                                                     background_color=color_util.MURKY_GREEN,
+                                                                     surface_color=color_util.YELLOW))
+                                               ])
+
+            """
+            End Visualize Contact Points
             """
             # if np.sum(1-main_dict['bottom_thresholded_boolean']) < 15:
             #
@@ -508,7 +531,10 @@ class PointcloudDataset(Dataset):
 
 
 if __name__ == '__main__':
-    pcdset = PointcloudDataset("../out/canonical_pointclouds/test/voxelized_samples",
-                               augment_extrinsics=True,
-                               depth_noise_scale=1.5)
-    sample = pcdset.__getitem__(0)
+    pcdset = PointcloudDataset("../out/datasets/bandu_train/jan18_train/voxelized_samples",
+                               augment_extrinsics=False,
+                               depth_noise_scale=0)
+
+    # augment_extrinsics = True
+    # depth_noise_scale = 1.5
+    sample = pcdset.__getitem__(50)

@@ -13,6 +13,9 @@ out/canonical_pointclouds/test/fps_randomizenoiseTrue_numfps2_samples --stats_js
 python3 train_relativerotation.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/losses/cvae_btb_loss_config.py out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples out/canonical_pointclouds/jan8_val/fps_randomizenoiseTrue_numfps10_samples --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json
 
 python3 train_relativerotation.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/losses/cvae_btb_loss_config.py out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples out/canonical_pointclouds/jan8_val/fps_randomizenoiseTrue_numfps10_samples --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json --batch_size=32 --gpu0=8 --gpu1=9 --device_id=9
+
+
+python3 train_relativerotation.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py configs/losses/cvae_btb_loss_config.py out/datasets/bandu_train/jan18_train/voxelized_samples out/datasets/bandu_val/jan18_val/voxelized_samples --stats_json=out/datasets/bandu_train/jan18_train/voxelized_samples/rr_pn_stats.json --batch_size=32 --gpu0=6 --gpu1=7 --device_id=7 --threshold_frac=.06 --max_frac_threshold=.2
 ```
 
 # Training loss visualization
@@ -29,6 +32,7 @@ python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_trai
 
 python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointclouds/bandu_train/test/canonical_pointcloud_samples 2 1
  
+# make sure to fill in the settings at the top of the file!
 python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/bandu_train/test/fps_randomizenoiseTrue_numfps2_samples 0
 ```
 
@@ -46,6 +50,7 @@ python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_trai
 
 python3 data_generation/2_generate_fps_pointclouds_2.py out/datasets/bandu_train/jan18_train/canonical_pointcloud_samples
  
+# make sure to fill in the settings at the top of the file!
 python3 data_generation/calculate_stats_json.py out/datasets/bandu_train/jan18_train/voxelized_samples 0
 ```
 
@@ -53,11 +58,11 @@ Val (need to update)
 ```
 cd bandu_v1_full_clean
 
-python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_val/ jan8_val --num_samples=10
+python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_val jan18_val --num_samples=10
 
-python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointclouds/jan8_val/canonical_pointcloud_samples 10 1
+python3 data_generation/2_generate_fps_pointclouds_2.py out/datasets/bandu_val/jan18_val/canonical_pointcloud_samples
  
-python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/jan8_val/fps_randomizenoiseTrue_numfps10_samples 0
+python3 data_generation/calculate_stats_json.py out/datasets/bandu_val/jan18_val/voxelized_samples 0
 ```
 
 Test (engmikedset) (need to update)
