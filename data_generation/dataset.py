@@ -366,9 +366,9 @@ class PointcloudDataset(Dataset):
             # NOTE: THIS MUST HAPPEN AFTER APPLYING THE OTHER AUGS, AND THE ORIGINAL ROTATION!!
             # partial_pc = aug_rot.apply(partial_pc)
 
-            # aug 4: extrinsic trans
+            # aug 4: extrinsic trans in world frame
             if self.augment_extrinsics:
-                partial_pc += (np.random.uniform(3) - .5) * np.array([.02, .02, .005])
+                partial_pc += (np.random.uniform(3) - .5) * np.array([.015, .015, .005])
 
             # aug 5: augment with depth-conditional noise
             # convert to depth
@@ -482,7 +482,7 @@ class PointcloudDataset(Dataset):
                                                    working_pc,
                                                    color=vis_util.make_colors(main_dict['bottom_thresholded_boolean'],
                                                                      background_color=color_util.MURKY_GREEN,
-                                                                     surface_color=color_util.YELLOW))
+                                                                     surface_color=color_util.RED))
                                                ])
 
             """
@@ -508,7 +508,7 @@ class PointcloudDataset(Dataset):
             #                                                                    max_frac_threshold=self.max_frac_threshold).astype(
             #         float).squeeze(-1)
 
-            assert np.sum(1-main_dict['bottom_thresholded_boolean']) >= 15, print(np.sum(1-main_dict['bottom_thresholded_boolean']))
+            # assert np.sum(1-main_dict['bottom_thresholded_boolean']) >= 15, print(np.sum(1-main_dict['bottom_thresholded_boolean']))
 
         # 1-btb because 0s are contact points, 1s are background points
         if self.randomize_z_canonical:
@@ -532,9 +532,10 @@ class PointcloudDataset(Dataset):
 
 if __name__ == '__main__':
     pcdset = PointcloudDataset("../out/datasets/bandu_train/jan18_train/voxelized_samples",
-                               augment_extrinsics=False,
-                               depth_noise_scale=0)
-
+                               augment_extrinsics=True,
+                               depth_noise_scale=.3,
+                               threshold_frac=.04)
+    # todo: still some samples have no contact points
     # augment_extrinsics = True
     # depth_noise_scale = 1.5
-    sample = pcdset.__getitem__(50)
+    sample = pcdset.__getitem__(0)
