@@ -216,7 +216,7 @@ class CVAELoss(nn.Module):
         :param sigmoid_variance:
         :param sigmoid_offset:
         :param sigmoid_flip: whether or not to flip the sigmoid and anneal beta from 1 to 0
-        :param positive_class_weight:
+        :param positive_class_weight: the higher this is, the more we prioritize background points... because background points are the positive class
         :param iteration_count:
         :param final_target_capacity:
         :param final_target_capacity_iteration:

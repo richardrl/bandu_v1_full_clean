@@ -368,7 +368,7 @@ class PointcloudDataset(Dataset):
 
             # aug 4: extrinsic trans in world frame
             if self.augment_extrinsics:
-                partial_pc += (np.random.uniform(3) - .5) * np.array([.015, .015, .005])
+                partial_pc += (np.random.uniform(3) - .5) * np.array([.015, .015, .005]) * 2
 
             # aug 5: augment with depth-conditional noise
             # convert to depth
@@ -425,8 +425,10 @@ class PointcloudDataset(Dataset):
             fps_normals_transformed = None
 
         # add object dimension for solo object
-        print("ln422 pc")
-        print(pc)
+        # print("ln422 pc")
+        # print(pc)
+
+        pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
         main_dict['rotated_pointcloud'] = np.expand_dims(pc, axis=0).astype(float)
 
         # it is important we set rotated_quat here. rotated_quat is assumed to be just the object pose
@@ -453,15 +455,15 @@ class PointcloudDataset(Dataset):
             """
             Start Unit Test
             """
-            print("ln427")
+            # print("ln427")
             canonical_pc = np.concatenate(test_partial_pcs, axis=0)[:, :3]
 
             pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
 
             pcd = vis_util.make_point_cloud_o3d(canonical_pc, pc_colors)
-            o3d.visualization.draw_geometries([pcd,
-                                               o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
-                                               ])
+            # o3d.visualization.draw_geometries([pcd,
+            #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
+            #                                    ])
 
 
 
@@ -473,17 +475,16 @@ class PointcloudDataset(Dataset):
             Start Visualize Contact Points
             """
 
-            print("ln427")
             working_pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
 
-            o3d.visualization.draw_geometries([
-                                               o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0]),
-                                               vis_util.make_point_cloud_o3d(
-                                                   working_pc,
-                                                   color=vis_util.make_colors(main_dict['bottom_thresholded_boolean'],
-                                                                     background_color=color_util.MURKY_GREEN,
-                                                                     surface_color=color_util.RED))
-                                               ])
+            # o3d.visualization.draw_geometries([
+            #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0]),
+            #                                    vis_util.make_point_cloud_o3d(
+            #                                        working_pc,
+            #                                        color=vis_util.make_colors(main_dict['bottom_thresholded_boolean'],
+            #                                                          background_color=color_util.MURKY_GREEN,
+            #                                                          surface_color=color_util.RED))
+            #                                    ])
 
             """
             End Visualize Contact Points
@@ -533,7 +534,7 @@ class PointcloudDataset(Dataset):
 if __name__ == '__main__':
     pcdset = PointcloudDataset("../out/datasets/bandu_train/jan18_train/voxelized_samples",
                                augment_extrinsics=True,
-                               depth_noise_scale=.3,
+                               depth_noise_scale=1,
                                threshold_frac=.04)
     # todo: still some samples have no contact points
     # augment_extrinsics = True

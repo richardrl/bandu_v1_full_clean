@@ -260,9 +260,9 @@ def augment_depth_realsense(depth, depth_adjustment=0, coefficient_scale=1):
     # augment depth according to the empirical realsense paper
     # https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8768489&tag=1
 
-    print("ln250 augment depths")
-    print(np.max(depth))
-    print(np.min(depth))
+    # print("ln250 augment depths")
+    # print(np.max(depth))
+    # print(np.min(depth))
     sigma = .001063*coefficient_scale + coefficient_scale*.0007278*(depth-depth_adjustment) \
             + coefficient_scale*.003949*(depth-depth_adjustment)**2
     new_depth = np.random.normal(loc=depth, scale=sigma)

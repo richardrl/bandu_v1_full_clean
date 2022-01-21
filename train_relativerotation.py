@@ -15,7 +15,7 @@ parser.add_argument('val_dset_path', type=str)
 parser.add_argument('--resume_pkl', type=str, help="Checkpoint to resume from")
 parser.add_argument('--load_optim', action='store_true')
 parser.add_argument('--lr', type=float, default=0.0003)
-parser.add_argument('--kld_weight', type=float, default=.00001)
+# parser.add_argument('--kld_weight', type=float, default=.00001)
 parser.add_argument('--batch_size', type=int, default=8)
 parser.add_argument('--checkpoint_freq', type=int, default=10)
 parser.add_argument('--evaluation_freq', type=int, default=1, help="Evaluate every n epochs")
@@ -105,11 +105,16 @@ wandb.init(project="bandu_v1_full_clean", tags=[])
 wandb.config['run_dir'] = wandb.run.dir
 wandb.save(args.hyper_config)
 
+# save loss config file to wandb
+wandb.save(args.ldd_config)
+
 config = misc_util.load_hyperconfig_from_filepath(args.hyper_config)
 
 wandb.config.update(config)
 
 wandb.config.update(vars(args))
+
+wandb.config.update(misc_util.load_ldd_from_filepath(args.ldd_config).loss_params)
 
 models_dict = train_util.model_creator(config=config,
                             device_id=args.device_id)
@@ -184,7 +189,7 @@ train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_si
 val_dloader = DataLoader(val_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True,
                          num_workers=8)
 
-get_loss_and_diag_dict = misc_util.load_ldd_function_from_filepath(args.ldd_config)
+get_loss_and_diag_dict = misc_util.load_ldd_from_filepath(args.ldd_config).get_loss_and_diag_dict
 
 for epoch in range(num_epochs):
     print(f"ln73 Epoch {epoch}")

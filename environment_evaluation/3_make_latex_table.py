@@ -10,15 +10,15 @@ import json
 # sorted_dict = {k.capitalize(): v for k, v in sorted_dict.items()}
 
 height_success_jsons = [
-    "../out/bandu_results/vocal-fire-24/maxtrials16_height_success_means_dict.json"
+    "../out/bandu_results/vocal-fire-24/maxtrials84_height_success_means_dict.json"
 ]
 
 theta_jsons = [
-    "../out/bandu_results/vocal-fire-24/maxtrials16_best_theta_means_dict.json"
+    "../out/bandu_results/vocal-fire-24/maxtrials84_best_theta_means_dict.json"
 ]
 
 stddev_jsons = [
-    "../out/bandu_results/vocal-fire-24/maxtrials16_best_theta_stddevs_dict.json"
+    "../out/bandu_results/vocal-fire-24/maxtrials84_best_theta_stddevs_dict.json"
 ]
 
 

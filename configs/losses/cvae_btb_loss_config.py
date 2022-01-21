@@ -5,13 +5,13 @@ from utils.loss_util import CVAELoss
 
 loss_params = dict(recon_loss_type="bce",
                    sigmoid_variance=2000,
-                   sigmoid_offset=10,
-                   kld_weight=[0, .02],
+                   sigmoid_offset=5,
+                   kld_weight=[0, .01],
                    kl_type="mog_prior_kld",
                    prior_kld_weight=0,
-                   positive_class_weight=2,
+                   positive_class_weight=2.5,
                    equalize_num_pos_num_neg=True,
-                   iteration_count=600 * 100,
+                   iteration_count=0,
                    kld_lower=-10000000,
                    kld_upper=10000000
                    )

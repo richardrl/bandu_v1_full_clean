@@ -60,8 +60,11 @@ train_dset = PointcloudDataset(args.train_dset_path,
                                center_fps_pc=args.center_fps_pc,
                                shear_aug=None,
                                scale_aug=None,
-                               threshold_frac=.02,
-                               linear_search=True)
+                               threshold_frac=.06,
+                               max_frac_threshold=.2,
+                               linear_search=True,
+                                augment_extrinsics=True,
+                               depth_noise_scale=1.5)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True)
 
 batch = next(iter(train_dloader))
