@@ -202,7 +202,7 @@ def read_data_dir(samples_dir):
 
 # pd.set_option("display.max_rows", None, "display.max_columns", None)
 
-class PointcloudDataset(Dataset):
+class PybulletPointcloudDataset(Dataset):
     def __init__(self,
                  data_dir,
                  scale_aug="xyz",
@@ -532,10 +532,10 @@ class PointcloudDataset(Dataset):
 
 
 if __name__ == '__main__':
-    pcdset = PointcloudDataset("../out/datasets/bandu_train/jan18_train/voxelized_samples",
-                               augment_extrinsics=True,
-                               depth_noise_scale=1,
-                               threshold_frac=.04)
+    pcdset = PybulletPointcloudDataset("../out/datasets/bandu_train/jan18_train/voxelized_samples",
+                                       augment_extrinsics=True,
+                                       depth_noise_scale=1,
+                                       threshold_frac=.04)
     # todo: still some samples have no contact points
     # augment_extrinsics = True
     # depth_noise_scale = 1.5

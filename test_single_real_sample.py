@@ -4,6 +4,7 @@ import open3d
 import argparse
 import numpy as np
 import json
+import open3d as o3d
 
 
 parser = argparse.ArgumentParser()
@@ -57,7 +58,7 @@ open3d.visualization.draw_geometries([pcd])
 
 downsampled_pcd = pcd.voxel_down_sample(voxel_size=0.004)
 batch['rotated_pointcloud'] = torch.from_numpy(np.array(downsampled_pcd.points)).unsqueeze(0).unsqueeze(0)
-assert batch['rotated_pointcloud'].shape[2] > 1024 and batch['rotated_pointcloud'].shape[2] < 2048, batch['rotated_pointcloud'].shape
+# assert batch['rotated_pointcloud'].shape[2] > 1024 and batch['rotated_pointcloud'].shape[2] < 2048, batch['rotated_pointcloud'].shape
 
 # center pointcloud
 batch['rotated_pointcloud'] -= batch['rotated_pointcloud'].mean(axis=2)
@@ -77,17 +78,18 @@ predictions = models_dict['surface_classifier'].decode_batch(batch, ret_eps=Fals
                                                              z_samples_per_sample=predictions_num_z)
 
 # TODO: was this trained on threshold 0 or .5?
-mat, plane_model = surface_util.get_relative_rotation_from_binary_logits(batch['rotated_pointcloud'][0][0],
-                                                                                 predictions[0][0])
+rotmat, plane_model = surface_util.get_relative_rotation_from_binary_logits(batch['rotated_pointcloud'][0][0],
+                                                                            predictions[0][0])
 
 geoms_to_draw = []
 
 
 box, box_centroid = surface_util.gen_surface_box(plane_model, ret_centroid=True, color=[0, 0, .5])
-geoms_to_draw.append(vis_util.create_arrow(plane_model[:3], [0., 0., .5],
+norm_arrow = vis_util.create_arrow(plane_model[:3], [0., 0., .5],
                                              position=box_centroid,
                                            # object_com=sample_pkl['position'])
                                              object_com=np.zeros(3)), # because the object has been centered
+geoms_to_draw.append(norm_arrow
                      )
 geoms_to_draw.append(box)
 
@@ -100,11 +102,53 @@ contact_points_binary_mask = 1 -surface_points_binary_mask
 original_rgb_with_red_contact_points = (torch.from_numpy(np.array(downsampled_pcd.colors)).to(surface_points_binary_mask.device) * surface_points_binary_mask) + \
                                        contact_points_binary_mask * torch.Tensor([1, 0, 0]).unsqueeze(0).expand(surface_points_binary_mask.shape[0], -1).to(contact_points_binary_mask.device)
 
-geoms_to_draw.append(vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
-                                                                    color=original_rgb_with_red_contact_points.data.cpu().numpy() ))
+object_realsense_pcd = vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
+                                                                    color=original_rgb_with_red_contact_points.data.cpu().numpy() )
+geoms_to_draw.append(object_realsense_pcd)
                                                                     # color=vis_util.make_colors(
                                                                     #     torch.sigmoid(predictions[0][0])) ))
+coord_frame = open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0])
+geoms_to_draw.append(coord_frame)
 
-geoms_to_draw.append(open3d.geometry.TriangleMesh.create_coordinate_frame(.03, [0, 0, 0]))
-open3d.visualization.draw_geometries(geoms_to_draw)
-# run model on sample
+
+# icp visualization
+mesh_path = "parts/stls/main/engmikedset/Nut.stl"
+
+# resize to 0.75
+
+object_mesh = open3d.io.read_triangle_mesh(mesh_path)
+
+object_mesh.scale(.7, center=np.zeros(3))
+
+
+object_mesh.paint_uniform_color(np.array([64,224,208])/255)
+# object_mesh.paint_uniform_color(np.array([0, 0, 1]))
+
+object_mesh.compute_vertex_normals()
+
+object_mesh_pcd = object_mesh.sample_points_uniformly(number_of_points=1024)
+
+geoms_to_draw.append(object_mesh)
+mat = open3d.visualization.rendering.MaterialRecord()
+mat.base_color = np.array([1, 1, 1, .8])
+mat.shader = "defaultLitTransparency"
+
+
+# open3d.visualization.draw_geometries(geoms_to_draw)
+
+trans_init = np.asarray([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+threshold = 0.02
+
+reg_p2p = o3d.pipelines.registration.registration_icp(
+    object_mesh_pcd, object_realsense_pcd, threshold, trans_init,
+    o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+    o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000))
+
+open3d.visualization.draw([{'name': 'object_mesh', 'geometry': object_mesh.transform(reg_p2p.transformation), 'material': mat},
+                           {'name': 'coordinate_frame', 'geometry': coord_frame},
+                           {'name': 'object_realsense_pcd', 'geometry': object_realsense_pcd},
+                           # {'name': 'norm_arrow', 'geometry': norm_arrow},
+                           {'name': 'box', 'geometry': box}],
+                          show_skybox=False)
+
+# open3d.visualization.draw({'name': 'test', 'geometry': mesh, 'material': mat})
