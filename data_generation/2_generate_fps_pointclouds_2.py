@@ -1,6 +1,6 @@
 # load original dataset
 # voxelizes the samples and saves to disk
-from data_generation.dataset import PointcloudDataset
+from data_generation.sim_dataset import PybulletPointcloudDataset
 import torch
 from utils import pointcloud_util, camera_util, vis_util
 from pathlib import Path
@@ -19,7 +19,7 @@ original_data_dir = sys.argv[1]
 # num_fps_samples = int(sys.argv[2])
 # randomize_noise = bool(int(sys.argv[3]))
 
-pcdset_original = PointcloudDataset(original_data_dir)
+pcdset_original = PybulletPointcloudDataset(original_data_dir)
 
 # new_samples_dir = Path(original_data_dir) / ".." / f"fps_randomizenoise{randomize_noise}_numfps{num_fps_samples}_samples"
 new_samples_dir = Path(original_data_dir) / ".." / f"voxelized_samples"

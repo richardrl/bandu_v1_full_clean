@@ -5,6 +5,7 @@ import argparse
 import numpy as np
 import json
 import open3d as o3d
+from utils import color_util
 
 
 parser = argparse.ArgumentParser()
@@ -15,6 +16,8 @@ parser.add_argument('--stats_json')
 parser.add_argument('--device_id', default=0)
 
 args = parser.parse_args()
+
+topk_k = 100
 
 
 config = misc_util.load_hyperconfig_from_filepath(args.hyper_config)
@@ -56,6 +59,8 @@ pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - obb.
 # visualize pointcloud
 open3d.visualization.draw_geometries([pcd])
 
+
+
 downsampled_pcd = pcd.voxel_down_sample(voxel_size=0.004)
 batch['rotated_pointcloud'] = torch.from_numpy(np.array(downsampled_pcd.points)).unsqueeze(0).unsqueeze(0)
 # assert batch['rotated_pointcloud'].shape[2] > 1024 and batch['rotated_pointcloud'].shape[2] < 2048, batch['rotated_pointcloud'].shape
@@ -76,10 +81,23 @@ models_dict['surface_classifier'].eval()
 
 predictions = models_dict['surface_classifier'].decode_batch(batch, ret_eps=False,
                                                              z_samples_per_sample=predictions_num_z)
+# visualize confidence color mapped pointcloud
+open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
+                              color=vis_util.make_color_map(torch.sigmoid(predictions[0][0]).squeeze(-1)) )])
+
+# visualize thresholded pointcloud
+# open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
+#                               color=vis_util.make_colors(torch.sigmoid(predictions[0][0]).squeeze(-1) ,
+#                                                 background_color=color_util.MURKY_GREEN,
+#                                                 surface_color=color_util.YELLOW))])
 
 # TODO: was this trained on threshold 0 or .5?
 rotmat, plane_model = surface_util.get_relative_rotation_from_binary_logits(batch['rotated_pointcloud'][0][0],
-                                                                            predictions[0][0])
+                                                                            predictions[0][0],
+                                                                            topk_k=topk_k)
+
+    # ,
+    #                                                                         sigmoid_threshold=.1)
 
 geoms_to_draw = []
 
@@ -93,14 +111,22 @@ geoms_to_draw.append(norm_arrow
                      )
 geoms_to_draw.append(box)
 
-# original_rgb_with_red_contact_points =
 
-surface_points_binary_mask = torch.round(torch.sigmoid(predictions[0][0]))
+# below creates the cp binary mask from topk
+# -> [num_points]
+contact_points_binary_mask = torch.zeros_like(predictions[0][0].squeeze())
+contact_points_binary_mask[torch.topk(predictions[0][0].squeeze(), topk_k, largest=False)[-1]] = 1
 
-contact_points_binary_mask = 1 -surface_points_binary_mask
+surface_points_binary_mask = 1 - contact_points_binary_mask
+# below creates the contact points binary mask from sigmoid with threshold 50%
+# surface_points_binary_mask = torch.round(torch.sigmoid(predictions[0][0]))
+#
+# contact_points_binary_mask = 1 -surface_points_binary_mask
 
-original_rgb_with_red_contact_points = (torch.from_numpy(np.array(downsampled_pcd.colors)).to(surface_points_binary_mask.device) * surface_points_binary_mask) + \
-                                       contact_points_binary_mask * torch.Tensor([1, 0, 0]).unsqueeze(0).expand(surface_points_binary_mask.shape[0], -1).to(contact_points_binary_mask.device)
+# how to get colors
+zeroed_out_colors = (torch.from_numpy(np.array(downsampled_pcd.colors)).to(surface_points_binary_mask.device) * surface_points_binary_mask.unsqueeze(-1))
+original_rgb_with_red_contact_points = zeroed_out_colors + \
+                                       contact_points_binary_mask.unsqueeze(-1) * torch.Tensor([1, 0, 0]).unsqueeze(0).expand(surface_points_binary_mask.shape[0], -1).to(contact_points_binary_mask.device)
 
 object_realsense_pcd = vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
                                                                     color=original_rgb_with_red_contact_points.data.cpu().numpy() )
@@ -144,7 +170,8 @@ reg_p2p = o3d.pipelines.registration.registration_icp(
     o3d.pipelines.registration.TransformationEstimationPointToPoint(),
     o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000))
 
-open3d.visualization.draw([{'name': 'object_mesh', 'geometry': object_mesh.transform(reg_p2p.transformation), 'material': mat},
+open3d.visualization.draw([
+    # {'name': 'object_mesh', 'geometry': object_mesh.transform(reg_p2p.transformation), 'material': mat},
                            {'name': 'coordinate_frame', 'geometry': coord_frame},
                            {'name': 'object_realsense_pcd', 'geometry': object_realsense_pcd},
                            # {'name': 'norm_arrow', 'geometry': norm_arrow},

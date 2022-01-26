@@ -179,7 +179,7 @@ def read_data_dir(samples_dir):
 
 # pd.set_option("display.max_rows", None, "display.max_columns", None)
 
-class PointcloudDataset(Dataset):
+class PybulletPointcloudDataset(Dataset):
     def __init__(self,
                  data_dir,
                  scale_aug="xyz",
@@ -372,5 +372,5 @@ class PointcloudDataset(Dataset):
 
 
 if __name__ == '__main__':
-    pcdset = PointcloudDataset("/home/richard/improbable/spinningup/out/canonical_pointclouds/bandu_val/v2_test/samples")
+    pcdset = PybulletPointcloudDataset("/home/richard/improbable/spinningup/out/canonical_pointclouds/bandu_val/v2_test/samples")
     sample = pcdset.__getitem__(0)

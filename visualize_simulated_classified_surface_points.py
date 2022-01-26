@@ -23,19 +23,12 @@ args = parser.parse_args()
 
 
 from utils.train_util import model_creator
-# from supervised_training.utils.misc_util import *
-# from supervised_training.utils.training_util import *
-# from supervised_training.utils.loss_util import *
-# from supervised_training.utils.pointcloud_util import PointcloudSampler
-# from supervised_training.utils.batch_processors import process_batch_relativerotation
-# from supervised_training.utils import surface_util, vae_util
-# from bandu.utils import *
 from scipy.spatial.transform.rotation import Rotation as R
 from utils import misc_util, surface_util
 import torch
 import open3d
 from torch.utils.data import DataLoader
-from data_generation.dataset import PointcloudDataset
+from data_generation.sim_dataset import PybulletPointcloudDataset
 import json
 import numpy as np
 
@@ -55,16 +48,17 @@ with open(args.stats_json, "r") as fp:
 
 models_dict['surface_classifier'].load_state_dict(sd['model'])
 
-train_dset = PointcloudDataset(args.train_dset_path,
+train_dset = PybulletPointcloudDataset(args.train_dset_path,
                                stats_dic=stats_dic,
                                center_fps_pc=args.center_fps_pc,
                                shear_aug=None,
                                scale_aug=None,
-                               threshold_frac=.06,
-                               max_frac_threshold=.2,
+                               threshold_frac=.02,
+                               max_frac_threshold=.1,
                                linear_search=True,
                                 augment_extrinsics=True,
-                               depth_noise_scale=1.5)
+                                       extrinsics_noise_scale=.5,
+                               depth_noise_scale=1.0)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True)
 
 batch = next(iter(train_dloader))
@@ -88,7 +82,8 @@ for sample_idx in range(args.batch_size):
         print(predictions.shape)
 
         mat, plane_model = surface_util.get_relative_rotation_from_binary_logits(batch['rotated_pointcloud'][sample_idx][0],
-                                                                                 predictions[sample_idx][z_idx])
+                                                                                 predictions[sample_idx][z_idx],
+                                                                                 sigmoid_threshold=.45)
         relrot = R.from_matrix(mat).as_quat()
 
         if "eps" in vars().keys():

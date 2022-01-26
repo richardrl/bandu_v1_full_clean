@@ -1,11 +1,11 @@
-from data_generation.dataset import PointcloudDataset
+from data_generation.sim_dataset import PybulletPointcloudDataset
 import open3d as o3d
 from utils import *
 import sys
 import numpy as np
 
 # load dset
-pcd_dset = PointcloudDataset(sys.argv[1],
+pcd_dset = PybulletPointcloudDataset(sys.argv[1],
                              center_fps_pc=False,
                              threshold_frac=.02)
                              # max_z_scale=.5,

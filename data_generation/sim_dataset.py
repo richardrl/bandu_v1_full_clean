@@ -27,12 +27,14 @@ def get_bti(batched_pointcloud,
     :param batched_pointcloud: np.ndarray[num_points, 3]
     :param threshold_bottom_of_upper_region: Bottom of upper region, expressed as fraction of total object height
     :param threshold_top_of_bottom_region: Top of bottom region, expressed as fraction of total object height
+
+    The feasible contact region is between the top of bottom region <-> bottom of upper region
     :param line_search: search along the canonical axis for the section with the most support
     :return:
     """
 
     if threshold_top_of_bottom_region is not None:
-        assert threshold_top_of_bottom_region < threshold_bottom_of_upper_region
+        assert threshold_top_of_bottom_region < threshold_bottom_of_upper_region, (threshold_top_of_bottom_region, threshold_bottom_of_upper_region)
 
     # returns boolean where 1s rotated_pc_mean BACKGROUND and 0 means surface
 
@@ -222,7 +224,9 @@ class PybulletPointcloudDataset(Dataset):
                  randomize_z_canonical=False,
                  further_downsample_frac=None,
                  augment_extrinsics=False,
-                 depth_noise_scale=1.):
+                 depth_noise_scale=1.,
+                 extrinsics_noise_scale=1.0,
+                 use_realsense_extrinsics=False):
 
         self.data_df = read_data_dir(data_dir)
         self.data_dir = data_dir
@@ -249,11 +253,20 @@ class PybulletPointcloudDataset(Dataset):
         self.randomize_z_canonical = randomize_z_canonical
         self.further_downsample_frac = further_downsample_frac
 
-        self.cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,
-                                    camera_forward_z_offset=.2)
+        if use_realsense_extrinsics:
+            self.cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,
+                                                     camera_forward_z_offset=.2,
+                                                     intrinsics_matrix=np.array([[888, 0, 630],
+                                                                                 [0, 888, 360],
+                                                                                 [0, 0, 1]], dtype=np.float64))
+        else:
+            self.cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,
+                                                     camera_forward_z_offset=.2)
 
         self.augment_extrinsics = augment_extrinsics
         self.depth_noise_scale = depth_noise_scale
+
+        self.extrinsics_noise_scale = extrinsics_noise_scale
 
     def __len__(self):
         # returns number of rows in dataframe
@@ -368,7 +381,7 @@ class PybulletPointcloudDataset(Dataset):
 
             # aug 4: extrinsic trans in world frame
             if self.augment_extrinsics:
-                partial_pc += (np.random.uniform(3) - .5) * np.array([.015, .015, .005]) * 2
+                partial_pc += (np.random.uniform(3) - .5) * np.array([.015, .015, .005]) * self.extrinsics_noise_scale
 
             # aug 5: augment with depth-conditional noise
             # convert to depth
@@ -475,8 +488,8 @@ class PybulletPointcloudDataset(Dataset):
             Start Visualize Contact Points
             """
 
-            working_pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
-
+            # working_pc = np.concatenate(working_partial_pcs, axis=0)[:, :3]
+            #
             # o3d.visualization.draw_geometries([
             #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0]),
             #                                    vis_util.make_point_cloud_o3d(
@@ -535,8 +548,11 @@ if __name__ == '__main__':
     pcdset = PybulletPointcloudDataset("../out/datasets/bandu_train/jan18_train/voxelized_samples",
                                        augment_extrinsics=True,
                                        depth_noise_scale=1,
-                                       threshold_frac=.04)
+                                       threshold_frac=.02,
+                                       extrinsics_noise_scale=.5,
+                                       max_frac_threshold=.06,
+                                       use_realsense_extrinsics=False)
     # todo: still some samples have no contact points
     # augment_extrinsics = True
     # depth_noise_scale = 1.5
-    sample = pcdset.__getitem__(0)
+    sample = pcdset.__getitem__(np.random.randint(len(pcdset)))

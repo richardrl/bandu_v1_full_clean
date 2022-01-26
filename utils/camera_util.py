@@ -10,7 +10,8 @@ from bandu.config import *
 
 def setup_cameras(cam_pkls=BANDU_ROOT / "cameras/*.pkl",
                   dist_from_eye_to_focus_pt=1,
-                  camera_forward_z_offset=0):
+                  camera_forward_z_offset=0,
+                  intrinsics_matrix=None):
     """
     
     :param cam_pkls: GLOB STRING, not a folder
@@ -28,7 +29,8 @@ def setup_cameras(cam_pkls=BANDU_ROOT / "cameras/*.pkl",
     # Setup the cameras
     [airobot_cameras[i].setup_camera_from_pkl(cam_pkls_paths[i],
                                               dist_from_eye_to_focus_pt=dist_from_eye_to_focus_pt,
-                                              camera_forward_z_offset=camera_forward_z_offset) for i in range(len(airobot_cameras))]
+                                              camera_forward_z_offset=camera_forward_z_offset,
+                                              intrinsics_matrix=intrinsics_matrix) for i in range(len(airobot_cameras))]
     return airobot_cameras
 
 

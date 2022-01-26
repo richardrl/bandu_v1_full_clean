@@ -69,11 +69,11 @@ Test (engmikedset) (need to update)
 ```
 cd bandu_v1_full_clean
 
-python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/engmikedset/ jan8_test --num_samples=2
+python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/engmikedset/ jan25_test --num_samples=10
 
-python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointclouds/jan8_test/canonical_pointcloud_samples 2 1
+python3 data_generation/2_generate_fps_pointclouds_2.py out/datasets/engmikedset/jan25_test/canonical_pointcloud_samples
  
-python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/jan8_test/fps_randomizenoiseTrue_numfps10_samples 0
+python3 data_generation/calculate_stats_json.py out/datasets/engmikedset/jan25_test 0
 ```
 
 ### Viewing sample pkl

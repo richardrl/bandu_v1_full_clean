@@ -1,4 +1,4 @@
-from data_generation.dataset import PointcloudDataset
+from data_generation.sim_dataset import PybulletPointcloudDataset
 import sys
 import numpy as np
 # from torch.data import Dataloader
@@ -8,7 +8,7 @@ train_dset_samples_dir = sys.argv[1]
 threshold_frac = .06
 max_frac_threshold = .2
 
-train_dset = PointcloudDataset(train_dset_samples_dir,
+train_dset = PybulletPointcloudDataset(train_dset_samples_dir,
                                stats_dic=None,
                                threshold_frac=threshold_frac,
                                max_frac_threshold=max_frac_threshold)

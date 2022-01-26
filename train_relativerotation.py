@@ -69,6 +69,10 @@ parser.add_argument('--max_frac_threshold', type=float, default=.1)
 parser.add_argument('--dont_make_btb', action='store_true')
 parser.add_argument('--randomize_z_canonical', action='store_true')
 parser.add_argument('--further_downsample_frac', default=None)
+parser.add_argument('--depth_scale', type=float, default=1.0, help="Dataset depth scale")
+parser.add_argument('--augment_extrinsics', action='store_true', help="Dataset augment extrinsics")
+parser.add_argument('--extrinsics_noise_scale', type=float, default=1.0, help="Dataset extrinsics noise scale")
+
 args = parser.parse_args()
 import torch
 torch.random.manual_seed(args.seed)
@@ -90,7 +94,7 @@ import json
 from torch.utils.data import DataLoader
 
 import os
-from data_generation.dataset import PointcloudDataset
+from data_generation.sim_dataset import PybulletPointcloudDataset
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
@@ -103,10 +107,12 @@ if args.detect_anomaly:
 wandb.init(project="bandu_v1_full_clean", tags=[])
 # wandb.config['git_id'] = git_hash
 wandb.config['run_dir'] = wandb.run.dir
-wandb.save(args.hyper_config)
 
-# save loss config file to wandb
+
+# save the following config files to wandb
+wandb.save(args.hyper_config)
 wandb.save(args.ldd_config)
+wandb.save(args.stats_json)
 
 config = misc_util.load_hyperconfig_from_filepath(args.hyper_config)
 
@@ -162,7 +168,7 @@ else:
 
 below_freeze_threshold_count = 0
 
-train_dset = PointcloudDataset(args.train_dset_path,
+train_dset = PybulletPointcloudDataset(args.train_dset_path,
                                stats_dic=stats_dic,
                                center_fps_pc=args.center_fps_pc,
                                linear_search=args.no_linear_search,
@@ -172,9 +178,10 @@ train_dset = PointcloudDataset(args.train_dset_path,
                                dont_make_btb=args.dont_make_btb,
                                randomize_z_canonical=args.randomize_z_canonical,
                                further_downsample_frac=args.further_downsample_frac,
-                               augment_extrinsics=True,
-                               depth_noise_scale=1.5)
-val_dset = PointcloudDataset(args.val_dset_path,
+                               augment_extrinsics=args.augment_extrinsics,
+                               depth_noise_scale=args.depth_scale,
+                                extrinsics_noise_scale=args.extrinsics_noise_scale)
+val_dset = PybulletPointcloudDataset(args.val_dset_path,
                             stats_dic=stats_dic,
                              center_fps_pc=args.center_fps_pc,
                              linear_search=args.no_linear_search,
@@ -183,7 +190,10 @@ val_dset = PointcloudDataset(args.val_dset_path,
                              rot_aug=args.rot_aug,
                              dont_make_btb=args.dont_make_btb,
                              randomize_z_canonical=args.randomize_z_canonical,
-                             further_downsample_frac=args.further_downsample_frac)
+                             further_downsample_frac=args.further_downsample_frac,
+                             augment_extrinsics=args.augment_extrinsics,
+                             depth_noise_scale=args.depth_scale,
+                            extrinsics_noise_scale=args.extrinsics_noise_scale)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True,
                            num_workers=8)
 val_dloader = DataLoader(val_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True,

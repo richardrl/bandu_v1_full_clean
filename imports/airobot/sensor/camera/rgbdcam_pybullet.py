@@ -41,9 +41,10 @@ class RGBDCameraPybullet(RGBDCamera):
         _ROOT_C.CAM.SIM = _C
         return _ROOT_C.clone()
 
-    def setup_camera_from_pkl(self, cam_pkl, scale_factor=1,
+    def setup_camera_from_pkl(self, cam_pkl,
                               dist_from_eye_to_focus_pt=1,
-                              camera_forward_z_offset=0):
+                              camera_forward_z_offset=0,
+                              intrinsics_matrix=None):
         self.cam_name = cam_pkl.split(".pkl")[0].split("/")[-1]
         with open(f"{cam_pkl}", "rb") as fp:
             camStateList = pickle.load(fp)
@@ -88,7 +89,8 @@ class RGBDCameraPybullet(RGBDCamera):
                               yaw=yaw,
                               pitch=pitch,
                               height=height,
-                              width=width)
+                              width=width,
+                              intrinsics_matrix=intrinsics_matrix)
             # self.img_height = int(height * scale_factor)
             # self.img_width = int(width * scale_factor)
             # aspect = self.img_width / float(self.img_height)
@@ -133,7 +135,8 @@ class RGBDCameraPybullet(RGBDCamera):
 
     def setup_camera(self, focus_pt=None, dist=3,
                      yaw=0, pitch=0, roll=0,
-                     height=None, width=None):
+                     height=None, width=None,
+                     intrinsics_matrix=None):
         """
         Setup the camera view matrix and projection matrix. Must be called
         first before images are renderred.
@@ -150,11 +153,16 @@ class RGBDCameraPybullet(RGBDCamera):
                 the default height from the config file.
             width (float): width of image. If None, it will use
                 the default width from the config file.
+
+            intrinsics_matrix: If this is specified, skip pybullet projection matrix calculation
+                and convert the intrinsics matrix to the opengl projection matrix.
         """
         if focus_pt is None:
             focus_pt = [0, 0, 0]
         if len(focus_pt) != 3:
             raise ValueError('Length of focus_pt should be 3 ([x, y, z]).')
+
+        # view_matrix -> extrinsics
         vm = self._pb.computeViewMatrixFromYawPitchRoll(focus_pt,
                                                         dist,
                                                         yaw,
@@ -168,11 +176,38 @@ class RGBDCameraPybullet(RGBDCamera):
         znear = self.cfgs.CAM.SIM.ZNEAR
         zfar = self.cfgs.CAM.SIM.ZFAR
         fov = self.cfgs.CAM.SIM.FOV
-        pm = self._pb.computeProjectionMatrixFOV(fov,
-                                                 aspect,
-                                                 znear,
-                                                 zfar)
-        self.proj_matrix = np.array(pm).reshape(4, 4)
+
+        # projection_matrix -> intrinsics
+        if intrinsics_matrix is not None:
+            fx = intrinsics_matrix[0][0]
+            fy = intrinsics_matrix[1][1]
+            cx = intrinsics_matrix[0][-1]
+            cy = intrinsics_matrix[1][-1]
+            w = 1280
+            h = 720
+
+            # https://fruty.io/2019/08/29/augmented-reality-with-opencv-and-opengl-the-tricky-projection-matrix/
+            # https://strawlab.org/2011/11/05/augmented-reality-with-OpenGL/
+            opengl_mtx = np.array([
+                [2 * fx / w, 0.0, (w - 2* cx) / w, 0.0],
+                [0.0, -2 * fy / h, (h - 2* cy) / h, 0.0],
+                [0.0, 0.0, (-zfar - znear) / (zfar - znear), -2.0 * zfar * znear / (zfar-znear)],
+                [0.0, 0.0, -1.0, 0.0]
+            ])
+
+            self.proj_matrix = opengl_mtx
+        else:
+            pm = self._pb.computeProjectionMatrixFOV(fov,
+                                                     aspect,
+                                                     znear,
+                                                     zfar)
+            # pybullet-generated projection matrix
+            # array([[1.24128032, 0., 0., 0.],
+            #        [0., 1.73205078, 0., 0.],
+            #        [0., 0., -1.002002, -1.],
+            #        [0., 0., -0.02002002, 0.]])
+
+            self.proj_matrix = np.array(pm).reshape(4, 4)
         rot = np.array([[1, 0, 0, 0],
                         [0, -1, 0, 0],
                         [0, 0, -1, 0],

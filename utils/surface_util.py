@@ -11,7 +11,9 @@ import copy
 def get_relative_rotation_from_binary_logits(rotated_pointcloud,
                                              binary_logits,
                                              sigmoid_threshold=.5,
-                                             dir="surface_to_upright"):
+                                             dir="surface_to_upright",
+                                             min_num_points=3,
+                                             topk_k=30):
     """
 
     :param rotated_pointcloud: num_points x 3
@@ -19,6 +21,7 @@ def get_relative_rotation_from_binary_logits(rotated_pointcloud,
     :param dir: whether we find the rotation from the surface normal to the -z, or the rotation from -z to the surface normal
     :param com: center of mass, used to determine oriented normal
     :param sigmoid_threshold: the threshold between 0 and 1. the binary logits will be sigmoided before going into this
+            the smaller the threshold the more conservative
     :return:
     """
     assert len(rotated_pointcloud.shape) == 2, rotated_pointcloud.shape
@@ -26,15 +29,24 @@ def get_relative_rotation_from_binary_logits(rotated_pointcloud,
         binary_logits = binary_logits.squeeze(-1)
     assert len(binary_logits.shape) == 1, binary_logits.shape
     assert dir in ["surface_to_upright", "upright_to_surface"]
-    surface_points = rotated_pointcloud[torch.sigmoid(binary_logits) < sigmoid_threshold]
+
+    # surface_points = rotated_pointcloud[torch.sigmoid(binary_logits) < sigmoid_threshold]
+
+    surface_points = rotated_pointcloud[torch.topk(binary_logits, topk_k, largest=False)[-1]]
+
     surface_pcd = open3d.geometry.PointCloud()
     surface_pcd.points = open3d.utility.Vector3dVector(surface_points.cpu().data.numpy())
 
-    assert surface_points.shape[0] > 15
+    assert surface_points.shape[0] > min_num_points
     try:
         print("using this many points...")
         print(np.min([15, surface_points.shape[0]]))
-        plane_model, plane_idxs = surface_pcd.segment_plane(.007, np.min([15, surface_points.shape[0]]), 1000)
+
+        # calculate the neighboring distance based on the PCA length along the pointcloud
+
+        # plane_model, plane_idxs = surface_pcd.segment_plane(.01, np.min([15, surface_points.shape[0]]), 100000)
+        plane_model, plane_idxs = surface_pcd.segment_plane(.002, np.min([min_num_points, surface_points.shape[0]]), 100000)
+
         plane_normal = np.array(plane_model)[:3]
         a, b, c, d = plane_model
 

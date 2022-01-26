@@ -5,7 +5,7 @@ import tqdm
 from deco import *
 import sys
 from torch.utils.data import DataLoader
-from data_generation.dataset import PointcloudDataset
+from data_generation.sim_dataset import PybulletPointcloudDataset
 
 from scipy.spatial.transform import Rotation as R
 
@@ -15,10 +15,15 @@ Settings
 """
 train_dset_samples_dir = sys.argv[1]
 use_normals = int(sys.argv[2])
-batch_size = 34
-threshold_frac = .06
-max_frac_threshold = .2
-
+batch_size = 36
+threshold_frac = .02
+max_frac_threshold = .06
+augment_extrinsics = True
+depth_noise_scale = 1.0
+extrinsics_noise_scale = .5
+"""
+End Settings
+"""
 # num_epochs = 100
 
 # train_pcs = torch.load(ic_path)['pcs']
@@ -40,10 +45,13 @@ rotated_quat_inv_var_sum_vector = torch.zeros(4).to(device)
 
 total_num_points = 0
 
-train_dset = PointcloudDataset(train_dset_samples_dir,
+train_dset = PybulletPointcloudDataset(train_dset_samples_dir,
                                stats_dic=None,
                                threshold_frac=threshold_frac,
-                               max_frac_threshold=max_frac_threshold)
+                               max_frac_threshold=max_frac_threshold,
+                               augment_extrinsics=augment_extrinsics,
+                               depth_noise_scale=depth_noise_scale,
+                               extrinsics_noise_scale=extrinsics_noise_scale)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=batch_size, drop_last=True, shuffle=True,
                            num_workers=0)
 
@@ -132,7 +140,13 @@ dic = dict(rotated_pointcloud_mean=rotated_pc_mean.data.cpu().numpy().tolist(),
            canonical_pointcloud_mean=canonical_pc_mean.data.cpu().numpy().tolist(),
            canonical_pointcloud_var=canonical_pc_var.data.cpu().numpy().tolist(),
            rotated_quat_inv_mean=rotated_quat_inv_mean.data.cpu().numpy().tolist(),
-           rotated_quat_inv_var=rotated_quat_inv_var.data.cpu().numpy().tolist()
+           rotated_quat_inv_var=rotated_quat_inv_var.data.cpu().numpy().tolist(),
+           threshold_frac=threshold_frac,
+           max_frac_threshold=max_frac_threshold,
+           batch_size=batch_size,
+           augment_extrinsics=augment_extrinsics,
+           depth_noise_scale=depth_noise_scale,
+           extrinsics_noise_scale=extrinsics_noise_scale
 )
 
 if use_normals:
