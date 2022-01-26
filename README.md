@@ -54,28 +54,6 @@ python3 data_generation/2_generate_fps_pointclouds_2.py out/datasets/bandu_train
 python3 data_generation/calculate_stats_json.py out/datasets/bandu_train/jan18_train/voxelized_samples 0
 ```
 
-Val (need to update)
-```
-cd bandu_v1_full_clean
-
-python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/bandu_val jan18_val --num_samples=10
-
-python3 data_generation/2_generate_fps_pointclouds_2.py out/datasets/bandu_val/jan18_val/canonical_pointcloud_samples
- 
-python3 data_generation/calculate_stats_json.py out/datasets/bandu_val/jan18_val/voxelized_samples 0
-```
-
-Test (engmikedset) (need to update)
-```
-cd bandu_v1_full_clean
-
-python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/engmikedset/ jan25_test --num_samples=10
-
-python3 data_generation/2_generate_fps_pointclouds_2.py out/datasets/engmikedset/jan25_test/canonical_pointcloud_samples
- 
-python3 data_generation/calculate_stats_json.py out/datasets/engmikedset/jan25_test 0
-```
-
 ### Viewing sample pkl
 
 ```
@@ -134,6 +112,14 @@ Fill out the arguments in make latex table, and run:
 python3 make_latex_table.py
 
 ```
+
+# Real2Sim experiments
+```
+python3 data_generation/1_generate_pointclouds_v2.py parts/urdfs/main/engmikedset jan26_real2sim --num_samples=1 --pb_loop --manual_pose --manually_choose_urdf
+
+```
+
+
 # Docker 
 To write to files in the mounted volume, make an "out" folder with permissions 777.
 

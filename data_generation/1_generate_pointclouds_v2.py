@@ -20,7 +20,7 @@ import time
 import itertools
 import numpy as np
 
-@concurrent
+# @concurrent
 def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, global_scaling, pb_loop=False, simulate=True,
                                        compute_oriented_normals=False, o3d_viz=False, data_dir=None,
                                        object_name=None):
@@ -51,12 +51,29 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
     current_oid = p.loadURDF(urdf_path, basePosition=position,
                              baseOrientation=[0.,0.,0.,1.], globalScaling=global_scaling)
 
-    initial_orientation = bandu_util.get_initial_orientation("full")
+    if args.manual_pose:
+        tmp_orientation = R.from_matrix(np.eye(3))
+        start_pos = np.array([0., 0., TABLE_HEIGHT + height_offset])
 
-    # true dropping position
-    start_pos = bandu_util.get_position_for_drop_above_table(height_off_set=height_offset)
+        # X rotation, Y rotation, then Z rotation is applied using the world frame
+        print("Give rotation angle for elementary rotations in the world frame: ")
+        x = float(eval(input("x: ")))
+        tmp_orientation = R.from_euler("x", x) * tmp_orientation
+        p.resetBasePositionAndOrientation(current_oid, start_pos, tmp_orientation.as_quat())
 
-    p.resetBasePositionAndOrientation(current_oid, start_pos, initial_orientation.as_quat())
+        y = float(eval(input("y: ")))
+        tmp_orientation = R.from_euler("y", y) * tmp_orientation
+        p.resetBasePositionAndOrientation(current_oid, start_pos, tmp_orientation.as_quat())
+
+        z = float(eval(input("z: ")))
+        initial_orientation = R.from_euler("z", z) * tmp_orientation
+        p.resetBasePositionAndOrientation(current_oid, start_pos, initial_orientation.as_quat())
+    else:
+        # true dropping position
+        initial_orientation = bandu_util.get_initial_orientation("full")
+
+        start_pos = bandu_util.get_position_for_drop_above_table(height_off_set=height_offset)
+        p.resetBasePositionAndOrientation(current_oid, start_pos, initial_orientation.as_quat())
 
     # current_oid = bandu_util.load_bandu_objects(urdf_paths=[urdf_path], scale_factor=.5)
 
@@ -158,7 +175,6 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
         rotated_quat=np.array(current_q),
         depths=depths,
         uv_one_in_cam=uv_one_in_cam
-        # seg_ims=seg_ims
     )
 
     torch.save(out_dic, data_dir / object_name / f"{sample_idx}.pkl")
@@ -166,14 +182,16 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
 
 
 
-@synchronized
-def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict, urdf_dir, prefix, num_samples, urdfs, pointcloud_output_dir,
+# @synchronized
+def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict,
+                                          urdf_dir, prefix, num_samples, urdfs, pointcloud_output_dir,
                                           height_offset=.2,
                                           global_scaling=1.5,
                                           simulate=True,
                                           compute_oriented_normals=True,
                                           pb_loop=False,
-                                          o3d_viz=False):
+                                          o3d_viz=False,
+                                          manually_choose_urdf=False):
     """
     Generates canonical samples for each urdf name. In the inner loop, saves the canonical samples.
     :param urdf_name_to_pointcloud_dict:
@@ -207,14 +225,36 @@ def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict, urdf_dir
         fd_dir = canonical_samples_data_dir / obj_name
         fd_dir.mkdir(parents=True, exist_ok=True)
 
-    for (urdf_path, sample_idx) in itertools.product(urdfs, range(num_samples)):
-        object_name = bandu_util.get_object_names([urdf_path])[0]
-        urdf_name_to_pointcloud_dict[object_name][sample_idx] = generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset,
-                                                                                                   global_scaling, simulate=simulate,
-                                                                                                   compute_oriented_normals=compute_oriented_normals,
-                                                                                                   pb_loop=pb_loop, o3d_viz=o3d_viz,
-                                                                                                   data_dir=canonical_samples_data_dir,
-                                                                                                   object_name=object_name)
+    if manually_choose_urdf:
+        sample_idx = 0
+        while 1:
+            for urdf_idx, urdf in enumerate(urdfs):
+                print(f"{urdf_idx} {urdf}")
+
+            chosen_idx = int(input("Choose URDF: "))
+
+            print(f"Chosen URDF: {urdfs[chosen_idx]}")
+
+            urdf_path = urdfs[chosen_idx]
+            object_name = bandu_util.get_object_names([urdf_path])[0]
+            urdf_name_to_pointcloud_dict[object_name][sample_idx] = generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset,
+                                                                                                       global_scaling, simulate=simulate,
+                                                                                                       compute_oriented_normals=compute_oriented_normals,
+                                                                                                       pb_loop=pb_loop, o3d_viz=o3d_viz,
+                                                                                                       data_dir=canonical_samples_data_dir,
+                                                                                                       object_name=object_name)
+
+            sample_idx += 1
+    else:
+        # If you don't manually choose the urdf, cycle through it
+        for (urdf_path, sample_idx) in itertools.product(urdfs, range(num_samples)):
+            object_name = bandu_util.get_object_names([urdf_path])[0]
+            urdf_name_to_pointcloud_dict[object_name][sample_idx] = generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset,
+                                                                                                       global_scaling, simulate=simulate,
+                                                                                                       compute_oriented_normals=compute_oriented_normals,
+                                                                                                       pb_loop=pb_loop, o3d_viz=o3d_viz,
+                                                                                                       data_dir=canonical_samples_data_dir,
+                                                                                                       object_name=object_name)
 
     print(urdf_name_to_pointcloud_dict)
 
@@ -249,6 +289,10 @@ if __name__ == "__main__":
                         default="out/datasets")
     parser.add_argument('--no_table', action='store_true')
     parser.add_argument('--no_simulate', action='store_true')
+    parser.add_argument('--manual_pose', action='store_true', help="Set the orientation of each pose manually, and place"
+                                                              "it in the middle of the table. Used in the paper for"
+                                                              "real2sim experiments.")
+    parser.add_argument('--manually_choose_urdf', action='store_true')
     parser.set_defaults(simulate=True)
     parser.set_defaults(table=True)
 
@@ -264,6 +308,8 @@ if __name__ == "__main__":
                                         camera_forward_z_offset=.2)
 
     if args.show_cams:
+        import pdb
+        pdb.set_trace()
         for cam_id, cam in enumerate(cameras):
             cam_trans = cam.get_cam_ext()[:3,3]
             cam_rot = cam.get_cam_ext()[:3, :3]
@@ -317,6 +363,8 @@ if __name__ == "__main__":
                                           compute_oriented_normals=args.compute_oriented_normals,
                                           pb_loop=args.pb_loop,
                                           height_offset=args.height_offset,
-                                          simulate=args.simulate)
+                                          simulate=args.simulate,
+                                            manually_choose_urdf=args.manually_choose_urdf,
+                                            )
     except Exception as e:
         print(f"Exception {e}")
