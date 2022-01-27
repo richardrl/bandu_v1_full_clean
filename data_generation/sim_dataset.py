@@ -188,12 +188,18 @@ def read_data_dir(samples_dir):
     for object_dir_path in object_dirs:
         # for sample_pkl in absolute_file_paths(object_dir_path):
         sample_file_paths = absolute_file_paths(object_dir_path)
+
+        if not sample_file_paths:
+            continue
+
         object_name = os.path.basename(os.path.normpath(object_dir_path))
         object_names = [object_name for _ in range(len(sample_file_paths))]
 
         # print("ln49 sfp")
         # print(sample_file_paths)
-        sample_idxs = [int(os.path.basename(os.path.normpath(sfp)).split(".")[0]) for sfp in sample_file_paths]
+
+        # todo: change naming, this is really just the name now
+        sample_idxs = [os.path.basename(os.path.normpath(sfp)).split(".")[0] for sfp in sample_file_paths]
         sample_df = pd.DataFrame(zip(sample_file_paths, object_names, sample_idxs),
                                  columns=column_names)
 
@@ -280,7 +286,8 @@ class PybulletPointcloudDataset(Dataset):
         main_dict = torch.load(fp)
 
         # sample uniformly to get fixed size
-        sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]), size=2048, replace=False)
+        sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]),
+                                        size=2048, replace=False)
 
         # -> 2048, 4 where the last dimension is the cam idx
         uniform_sampled_agg_depth_cam_idxs = main_dict['aggregate_uv1incam_depth_and_cam_idxs'][sampled_idxs, :]
@@ -469,11 +476,11 @@ class PybulletPointcloudDataset(Dataset):
             Start Unit Test
             """
             # print("ln427")
-            canonical_pc = np.concatenate(test_partial_pcs, axis=0)[:, :3]
+            # canonical_pc = np.concatenate(test_partial_pcs, axis=0)[:, :3]
 
             pc_colors = np.concatenate(working_partial_pcs_colors, axis=0)
 
-            pcd = vis_util.make_point_cloud_o3d(canonical_pc, pc_colors)
+            # pcd = vis_util.make_point_cloud_o3d(canonical_pc, pc_colors)
             # o3d.visualization.draw_geometries([pcd,
             #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])
             #                                    ])

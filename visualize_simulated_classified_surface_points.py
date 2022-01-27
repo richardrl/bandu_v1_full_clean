@@ -48,6 +48,8 @@ with open(args.stats_json, "r") as fp:
 
 models_dict['surface_classifier'].load_state_dict(sd['model'])
 
+models_dict['surface_classifier'].eval()
+
 train_dset = PybulletPointcloudDataset(args.train_dset_path,
                                stats_dic=stats_dic,
                                center_fps_pc=args.center_fps_pc,
@@ -59,7 +61,7 @@ train_dset = PybulletPointcloudDataset(args.train_dset_path,
                                 augment_extrinsics=True,
                                        extrinsics_noise_scale=.5,
                                depth_noise_scale=1.0)
-train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True)
+train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=False, shuffle=True)
 
 batch = next(iter(train_dloader))
 

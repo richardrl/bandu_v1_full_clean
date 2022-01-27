@@ -283,18 +283,18 @@ for epoch in range(num_epochs):
         #     if "prior_kld" in config['loss_params']['kl_type']:
         #         wandb_dict.update(current_temp=model.current_temp)
         #
-        #     if "cvae_bce_cat" in args.loss_str:
-        #         wandb_dict.update(current_temp=models_dict['surface_classifier'].current_temp)
+
+        wandb_dict.update(current_temp=models_dict['surface_classifier'].current_temp)
         #
         #     if "maf" in args.loss_str:
         #         wandb_dict.update(prior_flow_log_prob=
         #                           wandb.Histogram(predictions['prior'][0].data.cpu().numpy()))
         #
-        #     for k, v in predictions['prior'].items():
-        #         wandb_dict[k] = wandb.Histogram(v.data.cpu().numpy())
-        #
-        #     for k, v in predictions['encoder'].items():
-        #         wandb_dict[k] = wandb.Histogram(v.data.cpu().numpy())
+        for k, v in predictions['prior'].items():
+            wandb_dict[k] = wandb.Histogram(v.data.cpu().numpy())
+
+        for k, v in predictions['encoder'].items():
+            wandb_dict[k] = wandb.Histogram(v.data.cpu().numpy())
 
         for k, v in wandb_dict.items():
             if isinstance(v, torch.Tensor):

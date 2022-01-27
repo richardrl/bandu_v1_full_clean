@@ -19,6 +19,7 @@ import hashlib
 import time
 import itertools
 import numpy as np
+import datetime
 
 # @concurrent
 def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, global_scaling, pb_loop=False, simulate=True,
@@ -83,12 +84,21 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
     if pb_loop:
         pb_util.pb_key_loop('n')
 
-
+    if args.manual_pose:
+        # Attract the object above the able before simulating...
+        attracted_start_pos = np.zeros(3)
+        attracted_start_pos[-1] = TABLE_HEIGHT + pb_util.get_object_height(current_oid)/2
+        p.resetBasePositionAndOrientation(current_oid, attracted_start_pos, initial_orientation.as_quat())
     if simulate:
         for _ in range(1000):
             p.stepSimulation()
 
     current_p, current_q = p.getBasePositionAndOrientation(current_oid)
+
+    if args.manual_pose:
+        # check one last time
+        pb_util.pb_key_loop("m")
+
     # pointcloud, depths, uv_one_in_cam = camera_util.get_joint_pointcloud(cameras,
     #                                               obj_id=current_oid,
     #                                               filter_table_height=False,
@@ -177,7 +187,12 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
         uv_one_in_cam=uv_one_in_cam
     )
 
-    torch.save(out_dic, data_dir / object_name / f"{sample_idx}.pkl")
+    if args.manual_pose:
+        d = datetime.datetime.now()
+        filename = f"{d:%m-%d-%Y_%H:%M:%S}_{object_name}.torch".format(d=d, object_name=object_name)
+        torch.save(out_dic, data_dir / object_name / filename)
+    else:
+        torch.save(out_dic, data_dir / object_name / f"{sample_idx}.pkl")
     return out_dic
 
 
@@ -231,6 +246,7 @@ def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict,
             for urdf_idx, urdf in enumerate(urdfs):
                 print(f"{urdf_idx} {urdf}")
 
+            time.sleep(.1)
             chosen_idx = int(input("Choose URDF: "))
 
             print(f"Chosen URDF: {urdfs[chosen_idx]}")

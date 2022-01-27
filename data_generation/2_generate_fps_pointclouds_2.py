@@ -12,7 +12,7 @@ import numpy as np
 from scipy.spatial.transform.rotation import Rotation as R
 import os
 import open3d
-
+import time
 
 # original_data_dir = "/home/richard/improbable/spinningup/out/canonical_pointclouds/bandu_val/test_v2/samples"
 original_data_dir = sys.argv[1]
@@ -99,11 +99,14 @@ def create_aggregate_uv1incam_depth_and_cam_idxs(uv_one_in_cam,
     # make it all a big matrix for easy uniform sampling
 
     # -> num_points, 5
+
+    # cam_idx_to_segmented_uv_one_in_cam: List[np.ndarray[num_points, 3]]
+    # cam_idx_to_segmented_depth: List[np.ndarray[num_points, ]]
     aggregate_uv1incam_depth_and_cam_idxs = np.concatenate([
-        np.concatenate(cam_idx_to_segmented_uv_one_in_cam, axis=-1),
-        np.expand_dims(np.concatenate(cam_idx_to_segmented_depth, axis=-1), axis=0),
-        np.expand_dims(np.concatenate(cam_idxs_to_repeated_cam_idxs, axis=-1), axis=0),
-    ], axis=0).T
+        np.concatenate(cam_idx_to_segmented_uv_one_in_cam, axis=0),
+        np.expand_dims(np.concatenate(cam_idx_to_segmented_depth, axis=-1), axis=-1),
+        np.expand_dims(np.concatenate(cam_idxs_to_repeated_cam_idxs, axis=-1), axis=-1),
+    ], axis=-1)
     return aggregate_uv1incam_depth_and_cam_idxs
 
 import open3d as o3d
@@ -123,28 +126,6 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
 
     # record camera index for each point
     # downsample according to XYZ, while recording indices
-    """
-    Start Unit test
-    """
-    aggregate_uv1incam_depth_and_cam_idxs = create_aggregate_uv1incam_depth_and_cam_idxs(uv_one_in_cam,
-                                                 depths,
-                                                 False)
-    partial_pcs = camera_util.convert_uv_depth_matrix_to_pointcloud(aggregate_uv1incam_depth_and_cam_idxs.copy(),
-                                                                    cameras)
-
-    pc = np.concatenate(partial_pcs, axis=0)
-
-    # pcd = vis_util.make_point_cloud_o3d(R.from_quat(dic['rotated_quat']).inv().apply(pc - dic['position']), [1., 0., 0.])
-    # # visualize
-    # o3d.visualization.draw_geometries([pcd,
-    #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
-
-    # original_centered_pc z and pc z should be around 1
-    assert np.all(np.isclose(pc - dic['position'], original_centered_pc))
-    """
-    End Unit test
-    """
-
 
     pcd = vis_util.make_point_cloud_o3d(original_centered_pc, color=[0, 0, 0])
 
@@ -152,7 +133,6 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
 
     # output_pcd: new_num_points, 3
     # cubic_id_to_original_indices: new_num_points, max_indices_associated_with_single_cubic_pt
-    import time
     start = time.time()
     output_pcd, cubic_id_to_original_indices, _ = pcd.voxel_down_sample_and_trace(voxel_size=0.004,
                                                       min_bound=obb.get_min_bound(),
@@ -161,13 +141,36 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
 
     print("Time taken")
     print(end-start)
-    # use indices to get the camera index
-    # for every pt in the voxelized pcd, recreate the partial pointcloud by getting the camera idx associated with the
-    # mode of the indices associated to the cubic id
-
-    # create aggregate
 
     new_dic = dic.copy()
+
+
+    """
+    Start Unit test
+    """
+
+    aggregate_uv1incam_depth_and_cam_idxs = create_aggregate_uv1incam_depth_and_cam_idxs\
+                                                (uv_one_in_cam,
+                                                 depths,
+                                                 True,
+                                                output_pcd=output_pcd,
+                                                cubic_id_to_original_indices=cubic_id_to_original_indices
+                                                )
+    # partial_pcs = camera_util.convert_uv_depth_matrix_to_pointcloud(aggregate_uv1incam_depth_and_cam_idxs.copy(),
+    #                                                                 cameras)
+
+    # pc = np.concatenate(partial_pcs, axis=0)
+
+    # pcd = vis_util.make_point_cloud_o3d(R.from_quat(dic['rotated_quat']).inv().apply(pc - dic['position']), [1., 0., 0.])
+    # # visualize
+    # o3d.visualization.draw_geometries([pcd,
+    #                                    o3d.geometry.TriangleMesh.create_coordinate_frame(.06, [0, 0, 0])])
+
+    # original_centered_pc z and pc z should be around 1
+    # assert np.all(np.isclose(pc - dic['position'], original_centered_pc))
+    """
+    End Unit test
+    """
 
     new_dic['aggregate_uv1incam_depth_and_cam_idxs'] = aggregate_uv1incam_depth_and_cam_idxs.copy()
 
