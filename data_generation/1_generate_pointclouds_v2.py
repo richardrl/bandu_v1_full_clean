@@ -240,37 +240,37 @@ def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict,
         fd_dir = canonical_samples_data_dir / obj_name
         fd_dir.mkdir(parents=True, exist_ok=True)
 
-    if manually_choose_urdf:
-        sample_idx = 0
-        while 1:
-            for urdf_idx, urdf in enumerate(urdfs):
-                print(f"{urdf_idx} {urdf}")
-
-            time.sleep(.1)
-            chosen_idx = int(input("Choose URDF: "))
-
-            print(f"Chosen URDF: {urdfs[chosen_idx]}")
-
-            urdf_path = urdfs[chosen_idx]
-            object_name = bandu_util.get_object_names([urdf_path])[0]
-            urdf_name_to_pointcloud_dict[object_name][sample_idx] = generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset,
-                                                                                                       global_scaling, simulate=simulate,
-                                                                                                       compute_oriented_normals=compute_oriented_normals,
-                                                                                                       pb_loop=pb_loop, o3d_viz=o3d_viz,
-                                                                                                       data_dir=canonical_samples_data_dir,
-                                                                                                       object_name=object_name)
-
-            sample_idx += 1
-    else:
+    # if manually_choose_urdf:
+    #     sample_idx = 0
+    #     while 1:
+    #         for urdf_idx, urdf in enumerate(urdfs):
+    #             print(f"{urdf_idx} {urdf}")
+    #
+    #         time.sleep(.1)
+    #         chosen_idx = int(input("Choose URDF: "))
+    #
+    #         print(f"Chosen URDF: {urdfs[chosen_idx]}")
+    #
+    #         urdf_path = urdfs[chosen_idx]
+    #         object_name = bandu_util.get_object_names([urdf_path])[0]
+    #         urdf_name_to_pointcloud_dict[object_name][sample_idx] = generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset,
+    #                                                                                                    global_scaling, simulate=simulate,
+    #                                                                                                    compute_oriented_normals=compute_oriented_normals,
+    #                                                                                                    pb_loop=pb_loop, o3d_viz=o3d_viz,
+    #                                                                                                    data_dir=canonical_samples_data_dir,
+    #                                                                                                    object_name=object_name)
+    #
+    #         sample_idx += 1
+    # else:
         # If you don't manually choose the urdf, cycle through it
-        for (urdf_path, sample_idx) in itertools.product(urdfs, range(num_samples)):
-            object_name = bandu_util.get_object_names([urdf_path])[0]
-            urdf_name_to_pointcloud_dict[object_name][sample_idx] = generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset,
-                                                                                                       global_scaling, simulate=simulate,
-                                                                                                       compute_oriented_normals=compute_oriented_normals,
-                                                                                                       pb_loop=pb_loop, o3d_viz=o3d_viz,
-                                                                                                       data_dir=canonical_samples_data_dir,
-                                                                                                       object_name=object_name)
+    for (urdf_path, sample_idx) in itertools.product(urdfs, range(num_samples)):
+        object_name = bandu_util.get_object_names([urdf_path])[0]
+        urdf_name_to_pointcloud_dict[object_name][sample_idx] = generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset,
+                                                                                                   global_scaling, simulate=simulate,
+                                                                                                   compute_oriented_normals=compute_oriented_normals,
+                                                                                                   pb_loop=pb_loop, o3d_viz=o3d_viz,
+                                                                                                   data_dir=canonical_samples_data_dir,
+                                                                                                   object_name=object_name)
 
     print(urdf_name_to_pointcloud_dict)
 
@@ -309,6 +309,8 @@ if __name__ == "__main__":
                                                               "it in the middle of the table. Used in the paper for"
                                                               "real2sim experiments.")
     parser.add_argument('--manually_choose_urdf', action='store_true')
+    parser.add_argument('--use_realsense_intrinsics', action='store_true', help="Use realsense intrinsics to setup the cameras")
+    parser.add_argument('--o3d_viz', action="store_true", help="open3d visualization")
     parser.set_defaults(simulate=True)
     parser.set_defaults(table=True)
 
@@ -321,7 +323,10 @@ if __name__ == "__main__":
         p.removeBody(table_id)
 
     cameras = camera_util.setup_cameras(dist_from_eye_to_focus_pt=.1,
-                                        camera_forward_z_offset=.2)
+                                        camera_forward_z_offset=.2,
+                                        intrinsics_matrix=np.array([[888, 0, 630],
+                                                                                 [0, 888, 360],
+                                                                                 [0, 0, 1]], dtype=np.float64) if args.use_realsense_intrinsics else None)
 
     if args.show_cams:
         import pdb
@@ -381,6 +386,7 @@ if __name__ == "__main__":
                                           height_offset=args.height_offset,
                                           simulate=args.simulate,
                                             manually_choose_urdf=args.manually_choose_urdf,
+                                              o3d_viz=args.o3d_viz
                                             )
     except Exception as e:
         print(f"Exception {e}")

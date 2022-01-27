@@ -44,6 +44,8 @@ def create_aggregate_uv1incam_depth_and_cam_idxs(uv_one_in_cam,
                                                  cubic_id_to_original_indices=None):
     """
 
+    Assume 0 size pointclouds have been filtered out.
+
     :param uv_one_in_cam: List[np.ndarray[3, num_points]]
     :param depths: List[np.ndarray[num_points]]
     :param voxel_downsample:
@@ -58,7 +60,7 @@ def create_aggregate_uv1incam_depth_and_cam_idxs(uv_one_in_cam,
     cam_idx_to_segmented_uv_one_in_cam = [[] for _ in range(len(cameras))]
 
     original_pc_idx_to_cam_idxs = []
-    for cam_idx in range(len(cameras)):
+    for cam_idx in range(len(uv_one_in_cam)):
         original_pc_idx_to_cam_idxs.append(np.ones(uv_one_in_cam[cam_idx].shape[-1], dtype=np.int32) * cam_idx)
     original_pc_idx_to_cam_idxs = np.concatenate(original_pc_idx_to_cam_idxs, axis=0)
 
@@ -102,11 +104,22 @@ def create_aggregate_uv1incam_depth_and_cam_idxs(uv_one_in_cam,
 
     # cam_idx_to_segmented_uv_one_in_cam: List[np.ndarray[num_points, 3]]
     # cam_idx_to_segmented_depth: List[np.ndarray[num_points, ]]
-    aggregate_uv1incam_depth_and_cam_idxs = np.concatenate([
-        np.concatenate(cam_idx_to_segmented_uv_one_in_cam, axis=0),
-        np.expand_dims(np.concatenate(cam_idx_to_segmented_depth, axis=-1), axis=-1),
-        np.expand_dims(np.concatenate(cam_idxs_to_repeated_cam_idxs, axis=-1), axis=-1),
-    ], axis=-1)
+
+    # filter out all the zero point arrays
+
+    cam_idx_to_segmented_uv_one_in_cam = [_ for _ in cam_idx_to_segmented_uv_one_in_cam if _ != []]
+    cam_idx_to_segmented_depth = [_ for _ in cam_idx_to_segmented_depth if _ != []]
+    cam_idxs_to_repeated_cam_idxs = [_ for _ in cam_idxs_to_repeated_cam_idxs if _ != []]
+
+    try:
+        aggregate_uv1incam_depth_and_cam_idxs = np.concatenate([
+            np.concatenate(cam_idx_to_segmented_uv_one_in_cam, axis=0),
+            np.expand_dims(np.concatenate(cam_idx_to_segmented_depth, axis=-1), axis=-1),
+            np.expand_dims(np.concatenate(cam_idxs_to_repeated_cam_idxs, axis=-1), axis=-1),
+        ], axis=-1)
+    except:
+        import pdb
+        pdb.set_trace()
     return aggregate_uv1incam_depth_and_cam_idxs
 
 import open3d as o3d
@@ -172,6 +185,7 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
     End Unit test
     """
 
+    assert aggregate_uv1incam_depth_and_cam_idxs.shape[0] < 10000
     new_dic['aggregate_uv1incam_depth_and_cam_idxs'] = aggregate_uv1incam_depth_and_cam_idxs.copy()
 
     """
