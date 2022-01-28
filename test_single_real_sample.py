@@ -7,6 +7,7 @@ import json
 import open3d as o3d
 from utils import color_util
 from scipy.spatial.transform.rotation import Rotation as R
+import copy
 
 
 parser = argparse.ArgumentParser()
@@ -47,14 +48,6 @@ batch = dict()
 
 # num_points, 3 -> 1, 1, num_points, 3
 
-if 'points_incl_table' in sample_pkl.keys():
-    scene_pcd = vis_util.make_point_cloud_o3d(sample_pkl['points_incl_table'],
-                                        color=sample_pkl['colors_incl_table'],
-                                              normalize_color=False)
-    # visualize pointcloud
-    open3d.visualization.draw_geometries([scene_pcd,
-                                          open3d.geometry.TriangleMesh.create_coordinate_frame(.1, [0, 0, 0])])
-
 
 # this is the real image pkl
 pcd = vis_util.make_point_cloud_o3d(sample_pkl['points'],
@@ -71,6 +64,8 @@ obb = obb.create_from_points(pcd.points)
 # else:
 
 object_com = obb.get_center()
+
+# center pointcloud
 pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - object_com)
 
 # visualize pointcloud
@@ -82,8 +77,6 @@ downsampled_pcd = pcd.voxel_down_sample(voxel_size=0.004)
 batch['rotated_pointcloud'] = torch.from_numpy(np.array(downsampled_pcd.points)).unsqueeze(0).unsqueeze(0)
 # assert batch['rotated_pointcloud'].shape[2] > 1024 and batch['rotated_pointcloud'].shape[2] < 2048, batch['rotated_pointcloud'].shape
 
-# center pointcloud
-batch['rotated_pointcloud'] -= batch['rotated_pointcloud'].mean(axis=2)
 
 # below is if we have the training file pkl
 # batch['rotated_pointcloud'] = torch.from_numpy(sample_pkl['rotated_pointcloud']).unsqueeze(0).unsqueeze(0)
@@ -123,10 +116,22 @@ box, box_centroid = surface_util.gen_surface_box(plane_model, ret_centroid=True,
 norm_arrow = vis_util.create_arrow(plane_model[:3], [0., 0., .5],
                                              position=box_centroid,
                                            # object_com=sample_pkl['position'])
-                                             object_com=np.zeros(3)), # because the object has been centered
+                                             object_com=np.zeros(3)) # because the object has been centered
 geoms_to_draw.append(norm_arrow
                      )
 geoms_to_draw.append(box)
+
+
+if 'points_incl_table' in sample_pkl.keys():
+    scene_pcd = vis_util.make_point_cloud_o3d(sample_pkl['points_incl_table'],
+                                        color=sample_pkl['colors_incl_table'],
+                                              normalize_color=False)
+    # visualize pointcloud
+    large_coord_frame =  open3d.geometry.TriangleMesh.create_coordinate_frame(.1, [0, 0, 0])
+    open3d.visualization.draw_geometries([scene_pcd,
+                                         # large_coord_frame,
+                                          copy.deepcopy(norm_arrow).translate(object_com),
+                                          copy.deepcopy(box).translate(object_com)])
 
 
 # below creates the cp binary mask from topk
@@ -145,6 +150,8 @@ zeroed_out_colors = (torch.from_numpy(np.array(downsampled_pcd.colors)).to(surfa
 original_rgb_with_red_contact_points = zeroed_out_colors + \
                                        contact_points_binary_mask.unsqueeze(-1) * torch.Tensor([1, 0, 0]).unsqueeze(0).expand(surface_points_binary_mask.shape[0], -1).to(contact_points_binary_mask.device)
 
+# object_realsense_pcd = vis_util.make_point_cloud_o3d(sample_pkl['points'],
+#                                     color=sample_pkl['colors'])
 object_realsense_pcd = vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
                                                                     color=original_rgb_with_red_contact_points.data.cpu().numpy() )
 geoms_to_draw.append(object_realsense_pcd)
@@ -213,10 +220,18 @@ table_height_vector = table_normal * filter_height
 new_normal = R.from_euler("x", table_rotation_x).apply(table_normal)
 
 # filter out table points
-mask = (np.array(scene_pcd.points) @ new_normal  < workspace_limits[2][0])
+mask = (np.array(scene_pcd.points) @ new_normal < workspace_limits[2][0])
 
 # add back transformed object
+
+# make correction so that object must be above table by offsetting difference between lowest point on pc and the table minimum
 transformed_object_pts = (R.from_matrix(rotmat).apply(sample_pkl['points'] - object_com)  + object_com).copy()
+
+lowest_transformed_object_pt = transformed_object_pts[transformed_object_pts[:, -1].argmin(), :]
+
+if lowest_transformed_object_pt[-1] < workspace_limits[2][0]:
+    offset = workspace_limits[2][0] - lowest_transformed_object_pt[-1]
+    transformed_object_pts += np.array([0, 0, offset])
 
 new_scene_pc = np.concatenate([np.array(scene_pcd.points)[mask, :],
                                transformed_object_pts])
@@ -230,3 +245,4 @@ scene_pcd.colors = open3d.utility.Vector3dVector(new_scene_colors)
 
 
 open3d.visualization.draw_geometries([scene_pcd])
+                                      # large_coord_frame])
