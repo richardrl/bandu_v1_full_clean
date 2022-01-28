@@ -15,10 +15,10 @@ Settings
 """
 train_dset_samples_dir = sys.argv[1]
 use_normals = int(sys.argv[2])
-batch_size = 36
+batch_size = 32
 threshold_frac = .02
-max_frac_threshold = .06
-augment_extrinsics = True
+max_frac_threshold = .1
+augment_extrinsics = False
 depth_noise_scale = 1.0
 extrinsics_noise_scale = .5
 """
@@ -53,7 +53,7 @@ train_dset = PybulletPointcloudDataset(train_dset_samples_dir,
                                depth_noise_scale=depth_noise_scale,
                                extrinsics_noise_scale=extrinsics_noise_scale)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=batch_size, drop_last=True, shuffle=True,
-                           num_workers=0)
+                           num_workers=16)
 
 print("ln37 total dset samples")
 print(train_dset.__len__())

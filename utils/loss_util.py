@@ -351,7 +351,7 @@ class CVAELoss(nn.Module):
             assert len(predictions.shape) == 2 == len(truth_labels.shape), (predictions.shape, truth_labels.shape)
             reconstruction = loss_fnx(predictions, truth_labels.to(predictions.device))
 
-        if self.sigmoid_variance is not None:
+        if isinstance(self.kld_weight, list):
             assert len(self.kld_weight) == 2, self.kld_weight
             kl_start = self.kld_weight[0]
             kl_end = self.kld_weight[1]

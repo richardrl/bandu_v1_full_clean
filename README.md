@@ -67,8 +67,7 @@ python3 5_visualize_sample_pkl.py ~/bandu_v1_full_clean/out/canonical_pointcloud
 
 spring-plasma-2020 (paper model)
 ```
-python3 test_single_real_sample.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py out/spring-plasma-2020_checkpoint240 --stats_json=out/canonical_pointclouds/jan8_train/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json /data/pulkitag/models/rli14/realsense_docker/out/samples/01-09-2022_00:36:11_Cross.torch
-
+python3 test_single_real_sample.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py out/spring-plasma-2020_checkpoint240 --stats_json=out/datasets/bandu_train/jan18_train/voxelized_samples/rr_pn_stats.json /data/pulkitag/models/rli14/realsense_docker/out/samples/01-27-2022_00:28:17_JBlock_real2sim.torch
 ```
 
 ## Sim samples

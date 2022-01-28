@@ -53,15 +53,16 @@ models_dict['surface_classifier'].eval()
 train_dset = PybulletPointcloudDataset(args.train_dset_path,
                                stats_dic=stats_dic,
                                center_fps_pc=args.center_fps_pc,
+                                rot_aug=None,
                                shear_aug=None,
                                scale_aug=None,
                                threshold_frac=.02,
                                max_frac_threshold=.1,
                                linear_search=True,
-                                augment_extrinsics=True,
+                                augment_extrinsics=False,
                                        extrinsics_noise_scale=.5,
                                depth_noise_scale=1.0)
-train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=False, shuffle=True)
+train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=False, shuffle=False)
 
 batch = next(iter(train_dloader))
 

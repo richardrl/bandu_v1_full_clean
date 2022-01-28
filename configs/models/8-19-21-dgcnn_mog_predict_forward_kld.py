@@ -26,12 +26,13 @@ config = dict(
                     multi_gpu=True,
                     logvar_upper_bound=2,
                     logvar_lower_bound=-6,
-                    # start_temperature=2,
+                    start_temperature=.5,
                     # temperature_drop_idx=0,
                     # anneal_rate=0.00003,
                     # temp_min=0.5,
                     # current_batch_idx=600*100*2,
-                    sample_prior_bool=True
+                    sample_prior_bool=True,
+                    use_fixed_temp=True
                 ),
                 model_name="surface_classifier"),
 )

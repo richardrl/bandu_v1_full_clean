@@ -286,8 +286,12 @@ class PybulletPointcloudDataset(Dataset):
         main_dict = torch.load(fp)
 
         # sample uniformly to get fixed size
-        sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]),
+        try:
+            sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]),
                                         size=2048, replace=False)
+        except:
+            sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]),
+                                        size=2048, replace=True)
 
         # -> 2048, 4 where the last dimension is the cam idx
         uniform_sampled_agg_depth_cam_idxs = main_dict['aggregate_uv1incam_depth_and_cam_idxs'][sampled_idxs, :]

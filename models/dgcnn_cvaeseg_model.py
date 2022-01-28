@@ -51,7 +51,8 @@ class DGCNNCVAESeg(nn.Module):
                  quaternion_head=False,
                  A_vec_to_quat_head=False,
                  gpu0=0,
-                 gpu1=1):
+                 gpu1=1,
+                 use_fixed_temp=True):
         """
 
         :param embedding_dim:
@@ -241,6 +242,7 @@ class DGCNNCVAESeg(nn.Module):
         self.temp_min = temp_min
         self.current_batch_idx = current_batch_idx
         self.sample_prior_bool = sample_prior_bool
+        self.use_fixed_temp = use_fixed_temp
 
     def reparameterize(self, z_mu, z_logvar):
         # transforms individual independent normal samples by z_mu and z_logvar
@@ -645,18 +647,38 @@ class DGCNNCVAESeg(nn.Module):
     def sample_mog(self, weights, z_mu, z_logvar, num_components,
                    nB, nO, num_points, z_samples_per_sample=1, use_mean=False,
                    reparameterize=False):
+        """
+
+        Args:
+            weights:
+            z_mu:
+            z_logvar:
+            num_components:
+            nB:
+            nO:
+            num_points:
+            z_samples_per_sample:
+            use_mean: Don't sample, just use the mean
+            reparameterize:
+
+        Returns:
+
+        """
         nB = z_mu.shape[0]
         if reparameterize:
             assert z_samples_per_sample == 1, "z_samples_per_sample not implemented here yet"
             # start_temperature = .5
 
-            if self.current_batch_idx < self.temperature_drop_idx:
-                temp = self.temperature
+            if self.use_fixed_temp:
+                temp_to_use = self.current_temp
             else:
-                temp = np.maximum(self.temperature * np.exp(-self.anneal_rate * (self.current_batch_idx - self.temperature_drop_idx)), self.temp_min)
+                if self.current_batch_idx < self.temperature_drop_idx:
+                    temp_to_use = self.temperature
+                else:
+                    temp_to_use = np.maximum(self.temperature * np.exp(-self.anneal_rate * (self.current_batch_idx - self.temperature_drop_idx)), self.temp_min)
 
-            # expose current_tmp for logging
-            self.current_temp = temp
+                # expose current_tmp for logging
+                self.current_temp = temp_to_use
 
             latent_dim = 1
             assert len(weights.shape) == 2
@@ -664,7 +686,7 @@ class DGCNNCVAESeg(nn.Module):
 
             # y_hard_mask: nB, num_cats
             y_hard_mask, y_pre_softmax_logits = \
-                vae_util.gumbel_softmax(weights, temp, latent_dim, categorical_dim, hard=True)
+                vae_util.gumbel_softmax(weights, temp_to_use, latent_dim, categorical_dim, hard=True)
 
             vamp_z_mu = z_mu.unsqueeze(1).expand(-1, z_samples_per_sample, -1, self.latent_dim)
             vamp_z_logvar = z_logvar.unsqueeze(1).expand(-1, z_samples_per_sample, -1, self.latent_dim)

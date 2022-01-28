@@ -6,7 +6,7 @@ from utils.loss_util import CVAELoss
 loss_params = dict(recon_loss_type="bce",
                    sigmoid_variance=2000,
                    sigmoid_offset=5,
-                   kld_weight=[.02, .020000001],
+                   kld_weight=.02,
                    # kld_weight=.02,
                    kl_type="mog_prior_kld",
                    prior_kld_weight=0,

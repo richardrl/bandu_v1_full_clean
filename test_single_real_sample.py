@@ -46,6 +46,15 @@ batch = dict()
 
 # num_points, 3 -> 1, 1, num_points, 3
 
+if 'points_incl_table' in sample_pkl.keys():
+    scene_pcd = vis_util.make_point_cloud_o3d(sample_pkl['points_incl_table'],
+                                        color=sample_pkl['colors_incl_table'],
+                                              normalize_color=False)
+    # visualize pointcloud
+    open3d.visualization.draw_geometries([scene_pcd,
+                                          open3d.geometry.TriangleMesh.create_coordinate_frame(.1, [0, 0, 0])])
+
+
 # this is the real image pkl
 pcd = vis_util.make_point_cloud_o3d(sample_pkl['points'],
                                     color=sample_pkl['colors'])
@@ -54,10 +63,15 @@ obb = open3d.geometry.OrientedBoundingBox()
 obb = obb.create_from_points(pcd.points)
 
 # center at COM
+
+# if args.uniform_scale_longest_axis:
+#     # calculate scale along longest axis
+#     pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - obb.get_center())
+# else:
 pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - obb.get_center())
 
 # visualize pointcloud
-open3d.visualization.draw_geometries([pcd])
+# open3d.visualization.draw_geometries([pcd])
 
 
 
@@ -82,8 +96,8 @@ models_dict['surface_classifier'].eval()
 predictions = models_dict['surface_classifier'].decode_batch(batch, ret_eps=False,
                                                              z_samples_per_sample=predictions_num_z)
 # visualize confidence color mapped pointcloud
-open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
-                              color=vis_util.make_color_map(torch.sigmoid(predictions[0][0]).squeeze(-1)) )])
+# open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
+#                               color=vis_util.make_color_map(torch.sigmoid(predictions[0][0]).squeeze(-1)) )])
 
 # visualize thresholded pointcloud
 # open3d.visualization.draw_geometries([vis_util.make_point_cloud_o3d(batch['rotated_pointcloud'][0][0],
