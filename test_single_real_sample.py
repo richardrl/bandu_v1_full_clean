@@ -6,6 +6,7 @@ import numpy as np
 import json
 import open3d as o3d
 from utils import color_util
+from scipy.spatial.transform.rotation import Rotation as R
 
 
 parser = argparse.ArgumentParser()
@@ -68,7 +69,9 @@ obb = obb.create_from_points(pcd.points)
 #     # calculate scale along longest axis
 #     pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - obb.get_center())
 # else:
-pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - obb.get_center())
+
+object_com = obb.get_center()
+pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - object_com)
 
 # visualize pointcloud
 # open3d.visualization.draw_geometries([pcd])
@@ -193,3 +196,37 @@ open3d.visualization.draw([
                           show_skybox=False)
 
 # open3d.visualization.draw({'name': 'test', 'geometry': mesh, 'material': mat})
+
+
+# draw the object after transformed, overlayed on the same table
+table_rotation_x = .03
+filter_height = -.13
+
+workspace_limits = np.asarray([[0.6384-.25, 0.6384+.25], [.1325-.35, .1325+.35], [filter_height, filter_height+.2]])
+
+# remove table points
+table_normal = np.array([0, 0, 1])
+
+table_height_vector = table_normal * filter_height
+
+# rotate about x axis
+new_normal = R.from_euler("x", table_rotation_x).apply(table_normal)
+
+# filter out table points
+mask = (np.array(scene_pcd.points) @ new_normal  < workspace_limits[2][0])
+
+# add back transformed object
+transformed_object_pts = (R.from_matrix(rotmat).apply(sample_pkl['points'] - object_com)  + object_com).copy()
+
+new_scene_pc = np.concatenate([np.array(scene_pcd.points)[mask, :],
+                               transformed_object_pts])
+
+new_scene_colors = np.concatenate([np.array(scene_pcd.colors)[mask, :],
+                                   sample_pkl['colors']])
+
+scene_pcd.points = open3d.utility.Vector3dVector(new_scene_pc)
+scene_pcd.colors = open3d.utility.Vector3dVector(new_scene_colors)
+
+
+
+open3d.visualization.draw_geometries([scene_pcd])
