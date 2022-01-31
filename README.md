@@ -130,7 +130,7 @@ We need cuda10 to visualize. cuda11 to run on 3090 gtx cards.
 3. Uniform downsampling to 2048 (we can handle variable sized pointclouds, but this is done to ensure we stay within the computational limits)
 
 # Debugging issues
-- if get_bti_from_rotated increase max_frac_threshold
+- If get_bti_from_rotated fails increase max_frac_threshold, we might just not be finding enough points
 
 # Credits
 
