@@ -23,7 +23,7 @@ We use Wandb to visualize losses during training.
 You are welcome to roll your own visualization, just comment out the lines involving wandb.
 
 # Generating data
-### SO(3) augmentation only
+### SO(3) augmentation only, no dropping from table
 
 ```
 cd bandu_v1_full_clean
@@ -36,7 +36,7 @@ python3 data_generation/2_generate_fps_pointclouds_2.py out/canonical_pointcloud
 python3 data_generation/calculate_stats_json.py out/canonical_pointclouds/bandu_train/test/fps_randomizenoiseTrue_numfps2_samples 0
 ```
 
-### Standard augmentation used in training for our paper
+### Standard shape + SO(3) augmentation, dropping onto table, used in training for our paper
 
 10 samples in simulator per object
 
