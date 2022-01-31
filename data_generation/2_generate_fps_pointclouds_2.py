@@ -123,7 +123,7 @@ def create_aggregate_uv1incam_depth_and_cam_idxs(uv_one_in_cam,
     return aggregate_uv1incam_depth_and_cam_idxs
 
 import open3d as o3d
-# @concurrent
+@concurrent
 def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
     """
 
@@ -220,7 +220,7 @@ def uvd_to_segmented_uvd(depths, uv_one_in_cam, row, dic, original_centered_pc):
     torch.save(new_dic, new_samples_dir / row['object_name'] / f"{row['sample_idx']}.pkl")
 
 
-# @synchronized
+@synchronized
 def generate_samples_from_canonical_pointclouds():
     """
     Takes in full pointcloud and processes it

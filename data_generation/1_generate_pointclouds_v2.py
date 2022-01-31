@@ -21,7 +21,8 @@ import itertools
 import numpy as np
 import datetime
 
-# @concurrent
+
+@concurrent
 def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, global_scaling, pb_loop=False, simulate=True,
                                        compute_oriented_normals=False, o3d_viz=False, data_dir=None,
                                        object_name=None):
@@ -197,7 +198,7 @@ def generate_and_save_canonical_sample(urdf_path, sample_idx, height_offset, glo
 
 
 
-# @synchronized
+@synchronized
 def generate_urdf_name_to_pointcloud_dict(urdf_name_to_pointcloud_dict,
                                           urdf_dir, prefix, num_samples, urdfs, pointcloud_output_dir,
                                           height_offset=.2,
