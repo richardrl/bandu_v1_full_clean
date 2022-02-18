@@ -24,6 +24,7 @@ loss_fnx = CVAELoss(**loss_params)
 def get_loss_and_diag_dict(predictions, batch, increment_iteration=False):
     target = batch['bottom_thresholded_boolean']
     decoder_predictions = predictions['decoder'][0]
+
     loss, reconstruction_loss, kld_loss, kld_weight, extra_diag_dict = loss_fnx(decoder_predictions,
                                                                                 target,
                                                                                 canonical_pc=batch[

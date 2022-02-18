@@ -95,6 +95,7 @@ from torch.utils.data import DataLoader
 
 import os
 from data_generation.sim_dataset import PybulletPointcloudDataset
+from data_generation.spinningup_private_dataset import PointcloudDataset
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
@@ -168,7 +169,7 @@ else:
 
 below_freeze_threshold_count = 0
 
-train_dset = PybulletPointcloudDataset(args.train_dset_path,
+train_dset = PointcloudDataset(args.train_dset_path,
                                stats_dic=stats_dic,
                                center_fps_pc=args.center_fps_pc,
                                linear_search=args.no_linear_search,
@@ -177,11 +178,8 @@ train_dset = PybulletPointcloudDataset(args.train_dset_path,
                                rot_aug=args.rot_aug,
                                dont_make_btb=args.dont_make_btb,
                                randomize_z_canonical=args.randomize_z_canonical,
-                               further_downsample_frac=args.further_downsample_frac,
-                               augment_extrinsics=args.augment_extrinsics,
-                               depth_noise_scale=args.depth_scale,
-                                extrinsics_noise_scale=args.extrinsics_noise_scale)
-val_dset = PybulletPointcloudDataset(args.val_dset_path,
+                               further_downsample_frac=args.further_downsample_frac)
+val_dset = PointcloudDataset(args.val_dset_path,
                             stats_dic=stats_dic,
                              center_fps_pc=args.center_fps_pc,
                              linear_search=args.no_linear_search,
@@ -190,10 +188,33 @@ val_dset = PybulletPointcloudDataset(args.val_dset_path,
                              rot_aug=args.rot_aug,
                              dont_make_btb=args.dont_make_btb,
                              randomize_z_canonical=args.randomize_z_canonical,
-                             further_downsample_frac=args.further_downsample_frac,
-                             augment_extrinsics=args.augment_extrinsics,
-                             depth_noise_scale=args.depth_scale,
-                            extrinsics_noise_scale=args.extrinsics_noise_scale)
+                             further_downsample_frac=args.further_downsample_frac)
+# train_dset = PybulletPointcloudDataset(args.train_dset_path,
+#                                stats_dic=stats_dic,
+#                                center_fps_pc=args.center_fps_pc,
+#                                linear_search=args.no_linear_search,
+#                                threshold_frac=args.threshold_frac,
+#                                max_frac_threshold=args.max_frac_threshold,
+#                                rot_aug=args.rot_aug,
+#                                dont_make_btb=args.dont_make_btb,
+#                                randomize_z_canonical=args.randomize_z_canonical,
+#                                further_downsample_frac=args.further_downsample_frac,
+#                                augment_extrinsics=args.augment_extrinsics,
+#                                depth_noise_scale=args.depth_scale,
+#                                 extrinsics_noise_scale=args.extrinsics_noise_scale)
+# val_dset = PybulletPointcloudDataset(args.val_dset_path,
+#                             stats_dic=stats_dic,
+#                              center_fps_pc=args.center_fps_pc,
+#                              linear_search=args.no_linear_search,
+#                              threshold_frac=args.threshold_frac,
+#                              max_frac_threshold=args.max_frac_threshold,
+#                              rot_aug=args.rot_aug,
+#                              dont_make_btb=args.dont_make_btb,
+#                              randomize_z_canonical=args.randomize_z_canonical,
+#                              further_downsample_frac=args.further_downsample_frac,
+#                              augment_extrinsics=args.augment_extrinsics,
+#                              depth_noise_scale=args.depth_scale,
+#                             extrinsics_noise_scale=args.extrinsics_noise_scale)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True,
                            num_workers=8)
 val_dloader = DataLoader(val_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True,

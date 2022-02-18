@@ -331,7 +331,7 @@ class CVAELoss(nn.Module):
                 # positive aka background labels
                 num_points = truth_labels.shape[-1]
 
-                assert torch.sum(truth_labels) < num_points * truth_labels.shape[0]
+                assert torch.sum(truth_labels) < num_points * truth_labels.shape[0], torch.sum(truth_labels)
 
                 positive_label_count = torch.sum(truth_labels, axis=-1)
 
@@ -339,7 +339,7 @@ class CVAELoss(nn.Module):
                 np_ratio = negative_label_count / positive_label_count
 
                 pos_weight = truth_labels * np_ratio.unsqueeze(-1) * self.positive_class_weight + (1-truth_labels)
-                loss_fnx = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(predictions.device))
+                loss_fnx = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(predictions.device).squeeze(-1))
             elif self.positive_class_weight is not None:
                 # scale each positive label loss according to self.positive_class_weight
                 assert torch.sum(truth_labels) > 0
@@ -348,7 +348,11 @@ class CVAELoss(nn.Module):
             else:
                 loss_fnx = nn.BCEWithLogitsLoss()
 
+            # truth_labels = truth_labels.squeeze(-1)
+            # predictions = predictions.unsqueeze(-1)
+
             assert len(predictions.shape) == 2 == len(truth_labels.shape), (predictions.shape, truth_labels.shape)
+
             reconstruction = loss_fnx(predictions, truth_labels.to(predictions.device))
 
         if isinstance(self.kld_weight, list):

@@ -24,6 +24,7 @@ docker run -it \
     --env="XAUTHORITY=$XAUTH" \
     --volume="$XAUTH:$XAUTH" \
     --volume="$PWD/../:/home/docker/bandu_v1_full_clean":Z \
+    --volume="/data/pulkitag/models/rli14/restore_2021-09-12/:/data/pulkitag/models/rli14/restore_2021-09-12":Z \
     --volume="/data/pulkitag/models/rli14/bandu_v1_full_clean/out/datasets/:/data/pulkitag/models/rli14/bandu_v1_full_clean/out/datasets":Z \
     --volume="/data/pulkitag/models/rli14/realsense_docker/:/data/pulkitag/models/rli14/realsense_docker":Z \
     --privileged \
