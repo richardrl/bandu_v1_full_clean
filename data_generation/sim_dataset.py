@@ -14,6 +14,7 @@ from scipy.spatial.transform import Rotation as R
 import torch
 import copy
 import os
+from pytorch3d import ops as pytorch3d_ops
 
 
 def get_bti(batched_pointcloud,
@@ -286,17 +287,23 @@ class PybulletPointcloudDataset(Dataset):
         main_dict = torch.load(fp)
 
         # sample uniformly to get fixed size
-        try:
-            sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]),
-                                        size=2048, replace=False)
-        except:
-            sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]),
-                                        size=2048, replace=True)
+        # try:
+        #     sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]),
+        #                                 size=2048, replace=False)
+        # except:
+        #     sampled_idxs = np.random.choice(np.arange(main_dict['aggregate_uv1incam_depth_and_cam_idxs'].shape[0]),
+        #                                 size=2048, replace=True)
 
         # -> 2048, 4 where the last dimension is the cam idx
-        uniform_sampled_agg_depth_cam_idxs = main_dict['aggregate_uv1incam_depth_and_cam_idxs'][sampled_idxs, :]
+        # uniform_sampled_agg_depth_cam_idxs = main_dict['aggregate_uv1incam_depth_and_cam_idxs'][sampled_idxs, :]
+        # partial_pcs = camera_util.convert_uv_depth_matrix_to_pointcloud(uniform_sampled_agg_depth_cam_idxs,
+        #                                                   self.cameras)
 
-        partial_pcs = camera_util.convert_uv_depth_matrix_to_pointcloud(uniform_sampled_agg_depth_cam_idxs,
+        full_pc = np.concatenate(camera_util.convert_uv_depth_matrix_to_pointcloud(main_dict['aggregate_uv1incam_depth_and_cam_idxs'],
+                                                          self.cameras), axis=0)
+        selected_points, selected_indices = pytorch3d_ops.sample_farthest_points(torch.from_numpy(full_pc).unsqueeze(0), K=2048, random_start_point=True)
+
+        partial_pcs = camera_util.convert_uv_depth_matrix_to_pointcloud(main_dict['aggregate_uv1incam_depth_and_cam_idxs'][selected_indices.squeeze(0), :],
                                                           self.cameras)
 
         pc = np.concatenate(partial_pcs, axis=0)

@@ -74,6 +74,9 @@ RUN pip3 install torch==1.10.1+cu113 torchvision==0.11.2+cu113 torchaudio==0.10.
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade open3d
 
+RUN apt-get install -y git
+RUN pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
+
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["bash"]
 
