@@ -168,7 +168,8 @@ def read_data_dir(samples_dir):
 
         # print("ln49 sfp")
         # print(sample_file_paths)
-        sample_idxs = [int(os.path.basename(os.path.normpath(sfp)).split(".")[0]) for sfp in sample_file_paths]
+
+        sample_idxs = [os.path.basename(os.path.normpath(sfp)).split(".")[0] for sfp in sample_file_paths]
         sample_df = pd.DataFrame(zip(sample_file_paths, object_names, sample_idxs),
                                  columns=column_names)
 

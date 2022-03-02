@@ -28,7 +28,8 @@ from utils import misc_util, surface_util
 import torch
 import open3d
 from torch.utils.data import DataLoader
-from data_generation.sim_dataset import PybulletPointcloudDataset
+# from data_generation.sim_dataset import PybulletPointcloudDataset
+from data_generation.dataset_old import PybulletPointcloudDataset
 import json
 import numpy as np
 
@@ -58,11 +59,12 @@ train_dset = PybulletPointcloudDataset(args.train_dset_path,
                                scale_aug=None,
                                threshold_frac=.02,
                                max_frac_threshold=.1,
-                               linear_search=True,
-                                augment_extrinsics=False,
-                                       extrinsics_noise_scale=.5,
-                               depth_noise_scale=1.0)
+                               linear_search=True)
+                               #  augment_extrinsics=False,
+                               #         extrinsics_noise_scale=0,
+                               # depth_noise_scale=1.0)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=False, shuffle=False)
+
 
 batch = next(iter(train_dloader))
 

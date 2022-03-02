@@ -216,9 +216,9 @@ val_dset = PybulletPointcloudDataset(args.val_dset_path,
                              depth_noise_scale=args.depth_scale,
                             extrinsics_noise_scale=args.extrinsics_noise_scale)
 train_dloader = DataLoader(train_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True,
-                           num_workers=0)
+                           num_workers=8)
 val_dloader = DataLoader(val_dset, pin_memory=True, batch_size=args.batch_size, drop_last=True, shuffle=True,
-                         num_workers=0)
+                         num_workers=8)
 
 get_loss_and_diag_dict = misc_util.load_ldd_from_filepath(args.ldd_config).get_loss_and_diag_dict
 

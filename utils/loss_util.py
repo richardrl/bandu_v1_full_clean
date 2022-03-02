@@ -348,9 +348,6 @@ class CVAELoss(nn.Module):
             else:
                 loss_fnx = nn.BCEWithLogitsLoss()
 
-            # truth_labels = truth_labels.squeeze(-1)
-            # predictions = predictions.unsqueeze(-1)
-
             assert len(predictions.shape) == 2 == len(truth_labels.shape), (predictions.shape, truth_labels.shape)
 
             reconstruction = loss_fnx(predictions, truth_labels.to(predictions.device))

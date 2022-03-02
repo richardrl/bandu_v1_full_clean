@@ -54,6 +54,8 @@ python3 data_generation/2_generate_fps_pointclouds_2.py out/datasets/bandu_train
 python3 data_generation/calculate_stats_json.py out/datasets/bandu_train/jan18_train/voxelized_samples 0
 ```
 
+Engmikedset real2sim
+
 ### Viewing sample pkl
 
 ```
@@ -68,6 +70,9 @@ python3 5_visualize_sample_pkl.py ~/bandu_v1_full_clean/out/canonical_pointcloud
 spring-plasma-2020 (paper model)
 ```
 python3 test_single_real_sample.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py out/spring-plasma-2020_checkpoint240 --stats_json=out/datasets/bandu_train/jan18_train/voxelized_samples/rr_pn_stats.json /data/pulkitag/models/rli14/realsense_docker/out/samples/01-27-2022_00:28:17_JBlock_real2sim.torch
+
+python3 test_single_real_sample.py configs/models/8-19-21-dgcnn_mog_predict_forward_kld.py out/spring-plasma-2020_checkpoint240 --stats_json=/data/pulkitag/models/rli14/restore_202
+1-09-12/canonical_pointclouds/bandu_train/bandu_train_new_dset_aug28/fps_randomizenoiseTrue_numfps10_samples/rr_pn_stats.json /data/pulkitag/models/rli14/realsense_docker/out/samples/real2sim/01-28-2022_04\:28\:04_PyramidwEye_Real2Sim.torch
 ```
 
 ## Sim samples
