@@ -75,6 +75,9 @@ pcd.points = open3d.utility.Vector3dVector(np.array(sample_pkl['points']) - obje
 
 downsampled_pcd = pcd.voxel_down_sample(voxel_size=0.004)
 batch['rotated_pointcloud'] = torch.from_numpy(np.array(downsampled_pcd.points)).unsqueeze(0).unsqueeze(0)
+
+# scale factor
+batch['rotated_pointcloud'] = batch['rotated_pointcloud'] * 3
 # assert batch['rotated_pointcloud'].shape[2] > 1024 and batch['rotated_pointcloud'].shape[2] < 2048, batch['rotated_pointcloud'].shape
 
 
@@ -104,10 +107,9 @@ predictions = models_dict['surface_classifier'].decode_batch(batch, ret_eps=Fals
 # TODO: was this trained on threshold 0 or .5?
 rotmat, plane_model = surface_util.get_relative_rotation_from_binary_logits(batch['rotated_pointcloud'][0][0],
                                                                             predictions[0][0],
-                                                                            topk_k=topk_k)
+                                                                            sigmoid_threshold=.5)
+                                                                            # topk_k=topk_k)
 
-    # ,
-    #                                                                         sigmoid_threshold=.1)
 
 geoms_to_draw = []
 

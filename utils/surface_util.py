@@ -13,7 +13,7 @@ def get_relative_rotation_from_binary_logits(rotated_pointcloud,
                                              sigmoid_threshold=.5,
                                              dir="surface_to_upright",
                                              min_num_points=3,
-                                             topk_k=30):
+                                             topk_k=100):
     """
 
     :param rotated_pointcloud: num_points x 3
@@ -30,9 +30,12 @@ def get_relative_rotation_from_binary_logits(rotated_pointcloud,
     assert len(binary_logits.shape) == 1, binary_logits.shape
     assert dir in ["surface_to_upright", "upright_to_surface"]
 
-    # surface_points = rotated_pointcloud[torch.sigmoid(binary_logits) < sigmoid_threshold]
-
-    surface_points = rotated_pointcloud[torch.topk(binary_logits, topk_k, largest=False)[-1]]
+    if sigmoid_threshold:
+        surface_points = rotated_pointcloud[torch.sigmoid(binary_logits) < sigmoid_threshold]
+    elif topk_k:
+        surface_points = rotated_pointcloud[torch.topk(binary_logits, topk_k, largest=False)[-1]]
+    else:
+        raise NotImplemented
 
     surface_pcd = open3d.geometry.PointCloud()
     surface_pcd.points = open3d.utility.Vector3dVector(surface_points.cpu().data.numpy())

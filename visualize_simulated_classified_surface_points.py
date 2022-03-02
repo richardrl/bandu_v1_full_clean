@@ -88,7 +88,7 @@ for sample_idx in range(args.batch_size):
 
         mat, plane_model = surface_util.get_relative_rotation_from_binary_logits(batch['rotated_pointcloud'][sample_idx][0],
                                                                                  predictions[sample_idx][z_idx],
-                                                                                 sigmoid_threshold=.45)
+                                                                                 sigmoid_threshold=.5)
         relrot = R.from_matrix(mat).as_quat()
 
         if "eps" in vars().keys():
