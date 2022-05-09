@@ -1,4 +1,4 @@
-from bandu.config import *
+from bandu_v1_full_clean.config import *
 import os
 import numpy as np
 import pybullet as p
@@ -8,7 +8,92 @@ import urdfpy
 import time
 import json
 import trimesh
+from bandu_v1_full_clean.utils.transform_util import get_rotation_matrix_between_vecs
 
+"""
+Visualization
+"""
+
+import open3d
+def create_arrows_from_np(vecs, positions, color):
+    out_geoms = []
+    for i in range(len(vecs)):
+        if isinstance(color[0], list):
+            out_geoms.append(create_arrow(vecs[i], color[i], position=positions[i]))
+        else:
+            out_geoms.append(create_arrow(vecs[i], color, position=positions[i]))
+    return out_geoms
+
+
+def create_arrow(vec, color, vis=None, vec_len=None, scale=.06, radius=.12, position=(0,0,0),
+                 object_com=None):
+    """
+    Creates an error, where the arrow size is based on the vector magnitude.
+    :param vec:
+    :param color:
+    :param vis:
+    :param scale:
+    :param position:
+    :return:
+    """
+    if vec_len is None:
+        vec_len = (np.linalg.norm(vec))
+
+    mesh_arrow = open3d.geometry.TriangleMesh.create_arrow(
+        cone_height=0.2 * vec_len * scale,
+        cone_radius=0.06 * vec_len * radius,
+        cylinder_height=0.8 * vec_len * scale,
+        cylinder_radius=0.04 * vec_len * radius
+    )
+
+    # the default arrow points straightup
+    # therefore, we find the rotation that takes us from this arrow to our target vec, "vec"
+
+    if object_com is not None:
+        vec_endpoint = position + vec
+        neg_vec_endpoint = position - vec
+        if np.linalg.norm(vec_endpoint - object_com) < np.linalg.norm(neg_vec_endpoint - object_com):
+            vec = -vec
+
+    # print("ln554 create_arrow")
+    # print(vec)
+    rot_mat = get_rotation_matrix_between_vecs(vec, [0, 0, 1])
+    print(rot_mat)
+    mesh_arrow.rotate(rot_mat, center=np.array([0,0,0]))
+
+    H = np.eye(4)
+    H[:3, 3] = position
+    mesh_arrow.transform(H)
+
+    mesh_arrow.paint_uniform_color(color)
+    return mesh_arrow
+
+
+def create_sphere(vec, color, radius=.1):
+    import open3d
+    vec_len = np.linalg.norm(vec)
+    sphere = open3d.geometry.TriangleMesh.create_sphere(
+        radius=radius,
+    )
+
+    H = np.eye(4)
+    H[:3, 3] = vec
+    sphere.transform(H)
+    sphere.paint_uniform_color(color)
+
+    return sphere
+    # vis.add_geometry(sphere)
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def load_centered_meshes(stl_paths):
     try:

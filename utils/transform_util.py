@@ -15,6 +15,103 @@ import torch
 from scipy.spatial.transform import Rotation as R
 
 from imports.QuaterNet.quaternion import qrot
+import open3d
+import copy
+from functools import singledispatch
+
+class RigidbodyTransform:
+    def __init__(self, rotation_matrix, translation):
+        self.rotation = rotation_matrix
+        self.translation = translation
+
+        X = np.zeros((4, 4))
+        X[:3, :3] = rotation_matrix
+        X[:3, 3] = translation
+        X[3, 3] = 1
+        self.homogeneous_matrix = X
+
+    # def multiply(self, points):
+    #     """
+    #     Right multiplies points by the rigid transform
+    #     :param points: 3 x N
+    #     :return: transformed_points: 3 x N
+    #     """
+    #     assert points.shape[0] == 3
+    #     # homogenize points
+    #     points = np.concatenate((points, np.ones((1, points.shape[-1]))), axis=0)
+    #
+    #     return (self.homogeneous_matrix @ points)[:3, :]
+
+    @singledispatch
+    def multiply(self, arg):
+        print("ln42 multiply type")
+        print(type(arg))
+        raise NotImplementedError
+
+    @multiply.register
+    def _(self, arg: np.ndarray):
+        """
+        Right multiplies points by the rigid transform
+        :param points: 3 x N
+        :return: transformed_points: 3 x N
+        """
+        assert arg.shape[0] == 3
+        # homogenize points
+        points = np.concatenate((arg, np.ones((1, arg.shape[-1]))), axis=0)
+
+        return (self.homogeneous_matrix @ points)[:3, :]
+
+    def inv(self):
+        new = copy.deepcopy(self)
+        new.homogeneous_matrix = np.linalg.inv(self.homogeneous_matrix)
+
+        new.rotation = new.homogeneous_matrix[:3, :3]
+        new.translation = new.homogeneous_matrix[:3, 3]
+
+        return new
+
+
+@RigidbodyTransform.multiply.register(RigidbodyTransform)
+def _(self, arg: RigidbodyTransform):
+    """
+    Composes rigid body transforms
+    :param arg:
+    :return:
+    """
+    new_homo_mat = self.homogeneous_matrix @ arg.homogeneous_matrix
+    return RigidbodyTransform(new_homo_mat[:3, :3], new_homo_mat[:3, 3])
+
+
+def get_relative_rotation(rotated_pointcloud,
+                          binary_logits,
+                          sigmoid_threshold=.5,
+                          dir="surface_to_upright"):
+    """
+
+    :param rotated_pointcloud: num_points x 3
+    :param binary_logits: num_points
+    :param dir: whether we find the rotation from the surface normal to the -z, or the rotation from -z to the surface normal
+    :param com: center of mass, used to determine oriented normal
+    :return:
+    """
+    assert len(rotated_pointcloud.shape) == 2
+    assert len(binary_logits.shape) == 1
+    assert dir in ["surface_to_upright", "upright_to_surface"]
+    surface_points = rotated_pointcloud[torch.sigmoid(binary_logits) < sigmoid_threshold]
+    surface_pcd = open3d.geometry.PointCloud()
+    surface_pcd.points = open3d.utility.Vector3dVector(surface_points.cpu().data.numpy())
+    plane_model, plane_idxs = surface_pcd.segment_plane(.007, 15, 1000)
+    plane_normal = np.array(plane_model)[:3]
+    a, b, c, d = plane_model
+
+    # orient the plane normal away from the center of mass
+    # normal should have the same sign as the vector from the center of mass to the plane origin
+    oriented_normal = np.sign(-d) * plane_normal
+
+    if dir == "surface_to_upright":
+        return bandu_util.get_rotation_matrix_between_vecs([0, 0, -1], oriented_normal)
+    else:
+        return bandu_util.get_rotation_matrix_between_vecs(oriented_normal, [0, 0, -1])
 
 
 def ang_in_mpi_ppi(angle):
