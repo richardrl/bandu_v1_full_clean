@@ -1,3 +1,17 @@
+# Citation
+If you find this repository useful, please cite:
+
+```
+@inproceedings{li2022stable,
+  title={Stable object reorientation using contact plane registration},
+  author={Li, Richard and Esteves, Carlos and Makadia, Ameesh and Agrawal, Pulkit},
+  booktitle={2022 International Conference on Robotics and Automation (ICRA)},
+  pages={6379--6385},
+  year={2022},
+  organization={IEEE}
+}
+```
+
 # New Features
 - Contact plane registration implementation
 - CVAE models, including implementation of Mixture of Gaussian prior
